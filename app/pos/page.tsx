@@ -1,0 +1,339 @@
+"use client";
+
+import { useState } from "react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useInventory } from "@/components/inventory-context";
+import { formatCurrency, getCurrentStock } from "@/lib/store";
+
+export default function POSPage() {
+  const {
+    products,
+    categories,
+    cart,
+    addToCart,
+    removeFromCart,
+    updateCartQuantity,
+    clearCart,
+    checkout,
+  } = useInventory();
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
+  // Filter products
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      product.barcode.includes(search);
+    const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
+    const hasStock = getCurrentStock(product) > 0;
+    return matchesSearch && matchesCategory && hasStock;
+  });
+
+  // Calculate totals
+  const subtotal = cart.reduce((sum, item) => sum + item.product.sellingPrice * item.quantity, 0);
+  const tax = subtotal * 0.08; // 8% tax
+  const total = subtotal + tax;
+
+  const handleCheckout = () => {
+    checkout();
+    setShowCheckoutDialog(false);
+    setShowSuccessDialog(true);
+  };
+
+  const getMaxQuantity = (productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return 0;
+    const currentStock = getCurrentStock(product);
+    const cartItem = cart.find((item) => item.product.id === productId);
+    const cartQuantity = cartItem?.quantity || 0;
+    return currentStock;
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-3rem)] gap-6">
+      {/* Products Section */}
+      <div className="flex flex-1 flex-col space-y-4">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Point of Sale</h1>
+          <p className="text-sm text-muted-foreground">Select products to add to cart</p>
+        </div>
+
+        {/* Search & Filter */}
+        <Card className="rounded-2xl">
+          <CardContent className="pt-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search products or scan barcode..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 rounded-xl"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-48 rounded-xl">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Grid */}
+        <div className="flex-1 overflow-auto">
+          {filteredProducts.length === 0 ? (
+            <Card className="rounded-2xl h-full">
+              <CardContent className="flex flex-col items-center justify-center h-full py-12">
+                <div className="rounded-full bg-muted p-4">
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="mt-4 text-sm font-medium text-foreground">No products available</p>
+                <p className="text-xs text-muted-foreground">
+                  {search || categoryFilter !== "all"
+                    ? "Try adjusting your filters"
+                    : "All products are out of stock"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredProducts.map((product) => {
+                const currentStock = getCurrentStock(product);
+                const category = categories.find((c) => c.id === product.categoryId);
+                const inCart = cart.find((item) => item.product.id === product.id);
+
+                return (
+                  <Card
+                    key={product.id}
+                    className={`cursor-pointer rounded-2xl transition-all hover:shadow-md ${
+                      inCart ? "ring-2 ring-primary" : ""
+                    }`}
+                    onClick={() => {
+                      if (currentStock > (inCart?.quantity || 0)) {
+                        addToCart(product);
+                      }
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{category?.name}</p>
+                        </div>
+                        {inCart && (
+                          <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                            {inCart.quantity}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-3 flex items-end justify-between">
+                        <p className="text-lg font-bold text-foreground">
+                          {formatCurrency(product.sellingPrice)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{currentStock} in stock</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cart Section */}
+      <Card className="w-80 flex-shrink-0 rounded-2xl flex flex-col">
+        <CardHeader className="border-b border-border pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <ShoppingCart className="h-5 w-5" />
+              Cart ({cart.length})
+            </CardTitle>
+            {cart.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={clearCart}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col p-4">
+          {cart.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <div className="rounded-full bg-muted p-3">
+                <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-foreground">Cart is empty</p>
+              <p className="text-xs text-muted-foreground">Click on products to add them</p>
+            </div>
+          ) : (
+            <>
+              {/* Cart Items */}
+              <div className="flex-1 space-y-3 overflow-auto">
+                {cart.map((item) => {
+                  const maxQty = getMaxQuantity(item.product.id);
+                  return (
+                    <div
+                      key={item.product.id}
+                      className="flex items-center gap-3 rounded-xl bg-muted/50 p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {item.product.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(item.product.sellingPrice)} each
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateCartQuantity(item.product.id, item.quantity - 1);
+                          }}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-lg"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (item.quantity < maxQty) {
+                              updateCartQuantity(item.product.id, item.quantity + 1);
+                            }
+                          }}
+                          disabled={item.quantity >= maxQty}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromCart(item.product.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Totals */}
+              <div className="mt-4 space-y-2 border-t border-border pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-foreground">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax (8%)</span>
+                  <span className="text-foreground">{formatCurrency(tax)}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold">
+                  <span className="text-foreground">Total</span>
+                  <span className="text-foreground">{formatCurrency(total)}</span>
+                </div>
+              </div>
+
+              {/* Checkout Button */}
+              <Button
+                className="mt-4 w-full gap-2 rounded-xl"
+                size="lg"
+                onClick={() => setShowCheckoutDialog(true)}
+              >
+                <CreditCard className="h-4 w-4" />
+                Checkout
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Checkout Confirmation */}
+      <AlertDialog open={showCheckoutDialog} onOpenChange={setShowCheckoutDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Checkout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Complete this sale for {formatCurrency(total)}?
+              <span className="mt-2 block text-foreground">
+                {cart.length} item{cart.length > 1 ? "s" : ""} in cart
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCheckout} className="rounded-lg">
+              Complete Sale
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-success">Sale Complete!</AlertDialogTitle>
+            <AlertDialogDescription>
+              The transaction has been recorded successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)} className="rounded-lg">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
