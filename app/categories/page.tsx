@@ -32,14 +32,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useInventory } from "@/components/inventory-context";
-import { Category } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useCategories, createCategory, updateCategory, deleteCategory, Category } from "@/lib/api";
 
 export default function CategoriesPage() {
-  const { categories, products, addCategory, updateCategory, deleteCategory } = useInventory();
+  const { categories, isLoading } = useCategories();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,7 +52,7 @@ export default function CategoriesPage() {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
-    setFormData({ name: category.name, description: category.description });
+    setFormData({ name: category.name, description: category.description || "" });
   };
 
   const closeDialogs = () => {
@@ -67,34 +68,52 @@ export default function CategoriesPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const categoryData = {
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-    };
+    setIsSubmitting(true);
+    try {
+      const categoryData = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+      };
 
-    if (editingCategory) {
-      updateCategory(editingCategory.id, categoryData);
-    } else {
-      addCategory(categoryData);
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, categoryData);
+      } else {
+        await createCategory(categoryData);
+      }
+
+      closeDialogs();
+    } catch (error) {
+      console.error("Failed to save category:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    closeDialogs();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingCategory) {
-      deleteCategory(deletingCategory.id);
-      setDeletingCategory(null);
+      setIsSubmitting(true);
+      try {
+        await deleteCategory(deletingCategory.id);
+        setDeletingCategory(null);
+      } catch (error) {
+        console.error("Failed to delete category:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const getProductCount = (categoryId: string) => {
-    return products.filter((p) => p.categoryId === categoryId).length;
-  };
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -145,7 +164,8 @@ export default function CategoriesPage() {
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="submit" className="rounded-xl">
+                <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
+                  {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
                   Add Category
                 </Button>
               </div>
@@ -192,11 +212,11 @@ export default function CategoriesPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        {getProductCount(category.id)}
+                        {category.product_count || 0}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(category.createdAt).toLocaleDateString()}
+                      {new Date(category.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -256,7 +276,8 @@ export default function CategoriesPage() {
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <Button type="submit" className="rounded-xl">
+              <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
+                {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
                 Save Changes
               </Button>
             </div>
@@ -274,9 +295,9 @@ export default function CategoriesPage() {
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete &quot;{deletingCategory?.name}&quot;?
-              {getProductCount(deletingCategory?.id || "") > 0 && (
+              {(deletingCategory?.product_count || 0) > 0 && (
                 <span className="mt-2 block text-destructive">
-                  Warning: This category has {getProductCount(deletingCategory?.id || "")} product(s)
+                  Warning: This category has {deletingCategory?.product_count} product(s)
                   associated with it.
                 </span>
               )}
@@ -287,7 +308,9 @@ export default function CategoriesPage() {
             <AlertDialogAction
               onClick={handleDelete}
               className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isSubmitting}
             >
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

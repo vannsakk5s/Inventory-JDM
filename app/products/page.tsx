@@ -37,12 +37,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency, getCurrentStock, isLowStock, Product } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useProducts, useCategories, deleteProduct, formatCurrency, getCurrentStock, isLowStock, Product } from "@/lib/api";
 import { ProductForm } from "@/components/products/product-form";
 
 export default function ProductsPage() {
-  const { products, categories, deleteProduct } = useInventory();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -51,12 +50,15 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const { products, isLoading } = useProducts();
+  const { categories } = useCategories();
+
   // Filter products
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.barcode.includes(search);
-    const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
+      (product.barcode && product.barcode.includes(search));
+    const matchesCategory = categoryFilter === "all" || product.category_id === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -67,12 +69,20 @@ export default function ProductsPage() {
     currentPage * itemsPerPage
   );
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingProduct) {
-      deleteProduct(deletingProduct.id);
+      await deleteProduct(deletingProduct.id);
       setDeletingProduct(null);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -175,21 +185,20 @@ export default function ProductsPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedProducts.map((product) => {
-                      const category = categories.find((c) => c.id === product.categoryId);
                       const currentStock = getCurrentStock(product);
                       const lowStock = isLowStock(product);
 
                       return (
                         <TableRow key={product.id}>
                           <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{category?.name || "-"}</TableCell>
-                          <TableCell className="font-mono text-xs">{product.barcode}</TableCell>
-                          <TableCell>{product.madeIn}</TableCell>
+                          <TableCell>{product.category_name || "-"}</TableCell>
+                          <TableCell className="font-mono text-xs">{product.barcode || "-"}</TableCell>
+                          <TableCell>{product.made_in || "-"}</TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(product.costPrice)}
+                            {formatCurrency(parseFloat(product.cost_price?.toString() || "0"))}
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(product.sellingPrice)}
+                            {formatCurrency(parseFloat(product.selling_price?.toString() || "0"))}
                           </TableCell>
                           <TableCell className="text-right">
                             <span

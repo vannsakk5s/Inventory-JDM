@@ -20,8 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useSales, useStockMovements, formatCurrency } from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -35,52 +35,47 @@ import {
   Legend,
 } from "recharts";
 
-type TimeFilter = "3d" | "7d" | "1m" | "3m" | "6m" | "1y";
+type TimeFilter = "3" | "7" | "30" | "90" | "180" | "365";
 
-const timeFilters: { value: TimeFilter; label: string; days: number }[] = [
-  { value: "3d", label: "3 Days", days: 3 },
-  { value: "7d", label: "7 Days", days: 7 },
-  { value: "1m", label: "1 Month", days: 30 },
-  { value: "3m", label: "3 Months", days: 90 },
-  { value: "6m", label: "6 Months", days: 180 },
-  { value: "1y", label: "1 Year", days: 365 },
+const timeFilters: { value: TimeFilter; label: string }[] = [
+  { value: "3", label: "3 Days" },
+  { value: "7", label: "7 Days" },
+  { value: "30", label: "1 Month" },
+  { value: "90", label: "3 Months" },
+  { value: "180", label: "6 Months" },
+  { value: "365", label: "1 Year" },
 ];
 
 export default function HistoryPage() {
-  const { sales, stockMovements, products } = useInventory();
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("7d");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("7");
   const [currentPage, setCurrentPage] = useState(1);
+  const [movementPage, setMovementPage] = useState(1);
   const itemsPerPage = 10;
 
-  const selectedFilter = timeFilters.find((f) => f.value === timeFilter)!;
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - selectedFilter.days);
+  const days = parseInt(timeFilter);
+  const { sales, isLoading: salesLoading } = useSales(days);
+  const { movements, isLoading: movementsLoading } = useStockMovements(days);
 
-  // Filter data by time
-  const filteredSales = useMemo(
-    () => sales.filter((sale) => new Date(sale.createdAt) >= startDate),
-    [sales, startDate]
-  );
-
-  const filteredMovements = useMemo(
-    () => stockMovements.filter((movement) => new Date(movement.createdAt) >= startDate),
-    [stockMovements, startDate]
-  );
+  const isLoading = salesLoading || movementsLoading;
 
   // Calculate summary stats
-  const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalTransactions = filteredSales.length;
-  const totalStockIn = filteredMovements
-    .filter((m) => m.type === "in")
-    .reduce((sum, m) => sum + m.quantity, 0);
-  const totalStockOut = filteredMovements
-    .filter((m) => m.type === "out")
-    .reduce((sum, m) => sum + m.quantity, 0);
+  const totalRevenue = useMemo(() => 
+    sales.reduce((sum, sale) => sum + parseFloat(sale.total?.toString() || "0"), 0),
+    [sales]
+  );
+  const totalTransactions = sales.length;
+  const totalStockIn = useMemo(() =>
+    movements.filter((m) => m.type === "in").reduce((sum, m) => sum + m.quantity, 0),
+    [movements]
+  );
+  const totalStockOut = useMemo(() =>
+    movements.filter((m) => m.type === "out").reduce((sum, m) => sum + m.quantity, 0),
+    [movements]
+  );
 
-  // Generate chart data based on time filter
+  // Generate chart data
   const chartData = useMemo(() => {
-    const days = selectedFilter.days;
-    const dataPoints = Math.min(days, 30); // Max 30 data points
+    const dataPoints = Math.min(days, 30);
     const interval = Math.max(1, Math.floor(days / dataPoints));
 
     return Array.from({ length: dataPoints }, (_, i) => {
@@ -92,42 +87,51 @@ export default function HistoryPage() {
       endDate.setDate(endDate.getDate() + interval);
 
       const periodSales = sales.filter((sale) => {
-        const saleDate = new Date(sale.createdAt);
+        const saleDate = new Date(sale.created_at);
         return saleDate >= date && saleDate < endDate;
       });
 
-      const periodMovements = stockMovements.filter((m) => {
-        const movementDate = new Date(m.createdAt);
+      const periodMovements = movements.filter((m) => {
+        const movementDate = new Date(m.created_at);
         return movementDate >= date && movementDate < endDate;
       });
 
       return {
         date:
           interval > 1
-            ? `${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+            ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
             : date.toLocaleDateString("en-US", { weekday: "short" }),
-        revenue: periodSales.reduce((sum, s) => sum + s.total, 0),
+        revenue: periodSales.reduce((sum, s) => sum + parseFloat(s.total?.toString() || "0"), 0),
         transactions: periodSales.length,
         stockIn: periodMovements.filter((m) => m.type === "in").reduce((sum, m) => sum + m.quantity, 0),
         stockOut: periodMovements.filter((m) => m.type === "out").reduce((sum, m) => sum + m.quantity, 0),
       };
     });
-  }, [selectedFilter, sales, stockMovements]);
+  }, [days, sales, movements]);
 
   // Pagination for sales
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
-  const paginatedSales = filteredSales.slice(
+  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const paginatedSales = sales.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
   // Pagination for movements
-  const movementPages = Math.ceil(filteredMovements.length / itemsPerPage);
-  const [movementPage, setMovementPage] = useState(1);
-  const paginatedMovements = filteredMovements.slice(
+  const movementPages = Math.ceil(movements.length / itemsPerPage);
+  const paginatedMovements = movements.slice(
     (movementPage - 1) * itemsPerPage,
     movementPage * itemsPerPage
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  const selectedFilter = timeFilters.find((f) => f.value === timeFilter)!;
 
   return (
     <div className="space-y-6">
@@ -274,11 +278,11 @@ export default function HistoryPage() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {filteredSales.length} Sale{filteredSales.length !== 1 ? "s" : ""}
+                {sales.length} Sale{sales.length !== 1 ? "s" : ""}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {filteredSales.length === 0 ? (
+              {sales.length === 0 ? (
                 <div className="py-12 text-center">
                   <p className="text-sm text-muted-foreground">No sales in this period</p>
                 </div>
@@ -295,18 +299,13 @@ export default function HistoryPage() {
                     </TableHeader>
                     <TableBody>
                       {paginatedSales.map((sale) => {
-                        const productNames = sale.products
-                          .map((p) => {
-                            const product = products.find((prod) => prod.id === p.productId);
-                            return product?.name || "Unknown";
-                          })
-                          .join(", ");
-                        const totalItems = sale.products.reduce((sum, p) => sum + p.quantity, 0);
+                        const productNames = sale.items?.map((p) => p.product_name).filter(Boolean).join(", ") || "Items";
+                        const totalItems = sale.items?.reduce((sum, p) => sum + p.quantity, 0) || 0;
 
                         return (
                           <TableRow key={sale.id}>
                             <TableCell>
-                              {new Date(sale.createdAt).toLocaleDateString("en-US", {
+                              {new Date(sale.created_at).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
@@ -317,7 +316,7 @@ export default function HistoryPage() {
                             <TableCell className="max-w-xs truncate">{productNames}</TableCell>
                             <TableCell className="text-center">{totalItems}</TableCell>
                             <TableCell className="text-right font-medium">
-                              {formatCurrency(sale.total)}
+                              {formatCurrency(parseFloat(sale.total?.toString() || "0"))}
                             </TableCell>
                           </TableRow>
                         );
@@ -362,11 +361,11 @@ export default function HistoryPage() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {filteredMovements.length} Movement{filteredMovements.length !== 1 ? "s" : ""}
+                {movements.length} Movement{movements.length !== 1 ? "s" : ""}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {filteredMovements.length === 0 ? (
+              {movements.length === 0 ? (
                 <div className="py-12 text-center">
                   <p className="text-sm text-muted-foreground">No stock movements in this period</p>
                 </div>
@@ -382,37 +381,33 @@ export default function HistoryPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedMovements.map((movement) => {
-                        const product = products.find((p) => p.id === movement.productId);
-
-                        return (
-                          <TableRow key={movement.id}>
-                            <TableCell>
-                              {new Date(movement.createdAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </TableCell>
-                            <TableCell>{product?.name || "Unknown"}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  movement.type === "in"
-                                    ? "bg-success/10 text-success"
-                                    : "bg-warning/10 text-warning"
-                                }`}
-                              >
-                                {movement.type === "in" ? "Stock In" : "Stock Out"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {movement.type === "in" ? "+" : "-"}
-                              {movement.quantity}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {paginatedMovements.map((movement) => (
+                        <TableRow key={movement.id}>
+                          <TableCell>
+                            {new Date(movement.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell>{movement.product_name || "Unknown"}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                movement.type === "in"
+                                  ? "bg-success/10 text-success"
+                                  : "bg-warning/10 text-warning"
+                              }`}
+                            >
+                              {movement.type === "in" ? "Stock In" : "Stock Out"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {movement.type === "in" ? "+" : "-"}
+                            {movement.quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
 

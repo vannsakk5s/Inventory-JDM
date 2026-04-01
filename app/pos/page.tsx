@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,54 +22,108 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency, getCurrentStock } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useProducts, useCategories, createSale, formatCurrency, getCurrentStock, Product } from "@/lib/api";
+
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
 
 export default function POSPage() {
-  const {
-    products,
-    categories,
-    cart,
-    addToCart,
-    removeFromCart,
-    updateCartQuantity,
-    clearCart,
-    checkout,
-  } = useInventory();
+  const { products, isLoading } = useProducts();
+  const { categories } = useCategories();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Filter products
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.barcode.includes(search);
-    const matchesCategory = categoryFilter === "all" || product.categoryId === categoryFilter;
-    const hasStock = getCurrentStock(product) > 0;
-    return matchesSearch && matchesCategory && hasStock;
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        (product.barcode && product.barcode.includes(search));
+      const matchesCategory = categoryFilter === "all" || product.category_id === categoryFilter;
+      const hasStock = getCurrentStock(product) > 0;
+      return matchesSearch && matchesCategory && hasStock;
+    });
+  }, [products, search, categoryFilter]);
 
   // Calculate totals
-  const subtotal = cart.reduce((sum, item) => sum + item.product.sellingPrice * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + parseFloat(item.product.selling_price?.toString() || "0") * item.quantity, 0);
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + tax;
 
-  const handleCheckout = () => {
-    checkout();
-    setShowCheckoutDialog(false);
-    setShowSuccessDialog(true);
+  const addToCart = (product: Product) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const updateCartQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product.id === productId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  const handleCheckout = async () => {
+    setIsProcessing(true);
+    try {
+      const items = cart.map((item) => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+        price: parseFloat(item.product.selling_price?.toString() || "0"),
+      }));
+      
+      await createSale(items, total);
+      setCart([]);
+      setShowCheckoutDialog(false);
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error("Checkout failed:", error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getMaxQuantity = (productId: string) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return 0;
-    const currentStock = getCurrentStock(product);
-    const cartItem = cart.find((item) => item.product.id === productId);
-    const cartQuantity = cartItem?.quantity || 0;
-    return currentStock;
+    return getCurrentStock(product);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-3rem)] gap-6">
@@ -131,7 +185,6 @@ export default function POSPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredProducts.map((product) => {
                 const currentStock = getCurrentStock(product);
-                const category = categories.find((c) => c.id === product.categoryId);
                 const inCart = cart.find((item) => item.product.id === product.id);
 
                 return (
@@ -152,7 +205,7 @@ export default function POSPage() {
                           <p className="truncate text-sm font-medium text-foreground">
                             {product.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">{category?.name}</p>
+                          <p className="text-xs text-muted-foreground">{product.category_name}</p>
                         </div>
                         {inCart && (
                           <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
@@ -162,7 +215,7 @@ export default function POSPage() {
                       </div>
                       <div className="mt-3 flex items-end justify-between">
                         <p className="text-lg font-bold text-foreground">
-                          {formatCurrency(product.sellingPrice)}
+                          {formatCurrency(parseFloat(product.selling_price?.toString() || "0"))}
                         </p>
                         <p className="text-xs text-muted-foreground">{currentStock} in stock</p>
                       </div>
@@ -220,7 +273,7 @@ export default function POSPage() {
                           {item.product.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatCurrency(item.product.sellingPrice)} each
+                          {formatCurrency(parseFloat(item.product.selling_price?.toString() || "0"))} each
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -310,8 +363,9 @@ export default function POSPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCheckout} className="rounded-lg">
+            <AlertDialogCancel className="rounded-lg" disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCheckout} className="rounded-lg" disabled={isProcessing}>
+              {isProcessing && <Spinner className="mr-2 h-4 w-4" />}
               Complete Sale
             </AlertDialogAction>
           </AlertDialogFooter>

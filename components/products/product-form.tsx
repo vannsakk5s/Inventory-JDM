@@ -11,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInventory } from "@/components/inventory-context";
-import { Product } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useCategories, createProduct, updateProduct, Product } from "@/lib/api";
 
 interface ProductFormProps {
   product?: Product;
@@ -20,19 +20,19 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSuccess }: ProductFormProps) {
-  const { categories, addProduct, updateProduct } = useInventory();
+  const { categories } = useCategories();
   const isEditing = !!product;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: product?.name || "",
-    categoryId: product?.categoryId || "",
+    category_id: product?.category_id || "",
     barcode: product?.barcode || "",
-    madeIn: product?.madeIn || "",
-    costPrice: product?.costPrice?.toString() || "",
-    sellingPrice: product?.sellingPrice?.toString() || "",
-    stockIn: product?.stockIn?.toString() || "0",
-    stockOut: product?.stockOut?.toString() || "0",
-    stockLimit: product?.stockLimit?.toString() || "10",
+    made_in: product?.made_in || "",
+    cost_price: product?.cost_price?.toString() || "",
+    selling_price: product?.selling_price?.toString() || "",
+    stock_in: product?.stock_in?.toString() || "0",
+    stock_limit: product?.stock_limit?.toString() || "10",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,42 +40,48 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.categoryId) newErrors.categoryId = "Category is required";
+    if (!formData.category_id) newErrors.category_id = "Category is required";
     if (!formData.barcode.trim()) newErrors.barcode = "Barcode is required";
-    if (!formData.madeIn.trim()) newErrors.madeIn = "Country is required";
-    if (!formData.costPrice || parseFloat(formData.costPrice) < 0)
-      newErrors.costPrice = "Valid cost price is required";
-    if (!formData.sellingPrice || parseFloat(formData.sellingPrice) < 0)
-      newErrors.sellingPrice = "Valid selling price is required";
-    if (!formData.stockLimit || parseInt(formData.stockLimit) < 0)
-      newErrors.stockLimit = "Valid stock limit is required";
+    if (!formData.made_in.trim()) newErrors.made_in = "Country is required";
+    if (!formData.cost_price || parseFloat(formData.cost_price) < 0)
+      newErrors.cost_price = "Valid cost price is required";
+    if (!formData.selling_price || parseFloat(formData.selling_price) < 0)
+      newErrors.selling_price = "Valid selling price is required";
+    if (!formData.stock_limit || parseInt(formData.stock_limit) < 0)
+      newErrors.stock_limit = "Valid stock limit is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const productData = {
-      name: formData.name.trim(),
-      categoryId: formData.categoryId,
-      barcode: formData.barcode.trim(),
-      madeIn: formData.madeIn.trim(),
-      costPrice: parseFloat(formData.costPrice),
-      sellingPrice: parseFloat(formData.sellingPrice),
-      stockIn: parseInt(formData.stockIn) || 0,
-      stockOut: parseInt(formData.stockOut) || 0,
-      stockLimit: parseInt(formData.stockLimit) || 10,
-    };
+    setIsSubmitting(true);
+    try {
+      const productData = {
+        name: formData.name.trim(),
+        category_id: formData.category_id,
+        barcode: formData.barcode.trim(),
+        made_in: formData.made_in.trim(),
+        cost_price: parseFloat(formData.cost_price),
+        selling_price: parseFloat(formData.selling_price),
+        stock_in: parseInt(formData.stock_in) || 0,
+        stock_limit: parseInt(formData.stock_limit) || 10,
+      };
 
-    if (isEditing) {
-      updateProduct(product.id, productData);
-    } else {
-      addProduct(productData);
+      if (isEditing) {
+        await updateProduct(product.id, productData);
+      } else {
+        await createProduct(productData);
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error("Failed to save product:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onSuccess();
   };
 
   return (
@@ -96,8 +102,8 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
           <Select
-            value={formData.categoryId}
-            onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+            value={formData.category_id}
+            onValueChange={(value) => setFormData({ ...formData, category_id: value })}
           >
             <SelectTrigger id="category" className="rounded-xl">
               <SelectValue placeholder="Select category" />
@@ -110,7 +116,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
               ))}
             </SelectContent>
           </Select>
-          {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId}</p>}
+          {errors.category_id && <p className="text-xs text-destructive">{errors.category_id}</p>}
         </div>
 
         <div className="space-y-2">
@@ -126,97 +132,80 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="madeIn">Made In</Label>
+          <Label htmlFor="made_in">Made In</Label>
           <Input
-            id="madeIn"
-            value={formData.madeIn}
-            onChange={(e) => setFormData({ ...formData, madeIn: e.target.value })}
+            id="made_in"
+            value={formData.made_in}
+            onChange={(e) => setFormData({ ...formData, made_in: e.target.value })}
             className="rounded-xl"
             placeholder="Country of origin"
           />
-          {errors.madeIn && <p className="text-xs text-destructive">{errors.madeIn}</p>}
+          {errors.made_in && <p className="text-xs text-destructive">{errors.made_in}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="costPrice">Cost Price ($)</Label>
+          <Label htmlFor="cost_price">Cost Price ($)</Label>
           <Input
-            id="costPrice"
+            id="cost_price"
             type="number"
             step="0.01"
             min="0"
-            value={formData.costPrice}
-            onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+            value={formData.cost_price}
+            onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
             className="rounded-xl"
             placeholder="0.00"
           />
-          {errors.costPrice && <p className="text-xs text-destructive">{errors.costPrice}</p>}
+          {errors.cost_price && <p className="text-xs text-destructive">{errors.cost_price}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="sellingPrice">Selling Price ($)</Label>
+          <Label htmlFor="selling_price">Selling Price ($)</Label>
           <Input
-            id="sellingPrice"
+            id="selling_price"
             type="number"
             step="0.01"
             min="0"
-            value={formData.sellingPrice}
-            onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+            value={formData.selling_price}
+            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
             className="rounded-xl"
             placeholder="0.00"
           />
-          {errors.sellingPrice && <p className="text-xs text-destructive">{errors.sellingPrice}</p>}
+          {errors.selling_price && <p className="text-xs text-destructive">{errors.selling_price}</p>}
         </div>
 
         {!isEditing && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="stockIn">Initial Stock</Label>
-              <Input
-                id="stockIn"
-                type="number"
-                min="0"
-                value={formData.stockIn}
-                onChange={(e) => setFormData({ ...formData, stockIn: e.target.value })}
-                className="rounded-xl"
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stockLimit">Stock Limit (Alert)</Label>
-              <Input
-                id="stockLimit"
-                type="number"
-                min="0"
-                value={formData.stockLimit}
-                onChange={(e) => setFormData({ ...formData, stockLimit: e.target.value })}
-                className="rounded-xl"
-                placeholder="10"
-              />
-              {errors.stockLimit && <p className="text-xs text-destructive">{errors.stockLimit}</p>}
-            </div>
-          </>
-        )}
-
-        {isEditing && (
           <div className="space-y-2">
-            <Label htmlFor="stockLimit">Stock Limit (Alert)</Label>
+            <Label htmlFor="stock_in">Initial Stock</Label>
             <Input
-              id="stockLimit"
+              id="stock_in"
               type="number"
               min="0"
-              value={formData.stockLimit}
-              onChange={(e) => setFormData({ ...formData, stockLimit: e.target.value })}
+              value={formData.stock_in}
+              onChange={(e) => setFormData({ ...formData, stock_in: e.target.value })}
               className="rounded-xl"
-              placeholder="10"
+              placeholder="0"
             />
-            {errors.stockLimit && <p className="text-xs text-destructive">{errors.stockLimit}</p>}
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="stock_limit">Stock Limit (Alert)</Label>
+          <Input
+            id="stock_limit"
+            type="number"
+            min="0"
+            value={formData.stock_limit}
+            onChange={(e) => setFormData({ ...formData, stock_limit: e.target.value })}
+            className="rounded-xl"
+            placeholder="10"
+          />
+          {errors.stock_limit && <p className="text-xs text-destructive">{errors.stock_limit}</p>}
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
-        <Button type="submit" className="rounded-xl">
+        <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
+          {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
           {isEditing ? "Save Changes" : "Add Product"}
         </Button>
       </div>

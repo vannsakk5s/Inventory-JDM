@@ -1,8 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency } from "@/lib/store";
+import { formatCurrency } from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -13,34 +12,26 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export function SalesChart() {
-  const { sales } = useInventory();
+interface SalesChartProps {
+  salesData: { date: string; revenue: number }[];
+}
 
-  // Group sales by day for the last 7 days
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
+export function SalesChart({ salesData }: SalesChartProps) {
+  // Transform data for chart
+  const chartData = salesData.map((item) => ({
+    date: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
+    revenue: parseFloat(item.revenue?.toString() || "0"),
+  }));
 
-  const chartData = last7Days.map((date) => {
-    const dayStart = new Date(date);
-    const dayEnd = new Date(date);
-    dayEnd.setDate(dayEnd.getDate() + 1);
-
-    const daySales = sales.filter((sale) => {
-      const saleDate = new Date(sale.createdAt);
-      return saleDate >= dayStart && saleDate < dayEnd;
-    });
-
-    const total = daySales.reduce((sum, sale) => sum + sale.total, 0);
-
-    return {
-      date: date.toLocaleDateString("en-US", { weekday: "short" }),
-      revenue: total,
-    };
-  });
+  // If no data, show placeholder for last 7 days
+  if (chartData.length === 0) {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const today = new Date().getDay();
+    for (let i = 6; i >= 0; i--) {
+      const dayIndex = (today - i + 7) % 7;
+      chartData.push({ date: days[dayIndex], revenue: 0 });
+    }
+  }
 
   return (
     <Card className="rounded-2xl">

@@ -20,38 +20,52 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency, getCurrentStock, isLowStock, Product } from "@/lib/store";
+import { Spinner } from "@/components/ui/spinner";
+import { useProducts, restockProduct, formatCurrency, getCurrentStock, Product } from "@/lib/api";
 
 export default function LowStockPage() {
-  const { products, categories, addStockMovement } = useInventory();
+  const { products, isLoading } = useProducts({ lowStock: true });
   const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
   const [restockQuantity, setRestockQuantity] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const lowStockProducts = products.filter(isLowStock);
-
-  const handleRestock = () => {
+  const handleRestock = async () => {
     if (restockingProduct && restockQuantity) {
       const quantity = parseInt(restockQuantity);
       if (quantity > 0) {
-        addStockMovement({
-          productId: restockingProduct.id,
-          type: "in",
-          quantity,
-        });
-        setRestockingProduct(null);
-        setRestockQuantity("");
+        setIsSubmitting(true);
+        try {
+          await restockProduct(restockingProduct.id, quantity);
+          setRestockingProduct(null);
+          setRestockQuantity("");
+        } catch (error) {
+          console.error("Failed to restock:", error);
+        } finally {
+          setIsSubmitting(false);
+        }
       }
     }
   };
 
   const getCriticalLevel = (product: Product) => {
     const currentStock = getCurrentStock(product);
-    const percentage = (currentStock / product.stockLimit) * 100;
+    const percentage = (currentStock / product.stock_limit) * 100;
     if (currentStock === 0) return "out";
     if (percentage <= 50) return "critical";
     return "low";
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  const outOfStock = products.filter((p) => getCriticalLevel(p) === "out").length;
+  const critical = products.filter((p) => getCriticalLevel(p) === "critical").length;
+  const low = products.filter((p) => getCriticalLevel(p) === "low").length;
 
   return (
     <div className="space-y-6">
@@ -61,10 +75,10 @@ export default function LowStockPage() {
           <h1 className="text-2xl font-semibold text-foreground">Low Stock Alerts</h1>
           <p className="text-sm text-muted-foreground">Products that need restocking</p>
         </div>
-        {lowStockProducts.length > 0 && (
+        {products.length > 0 && (
           <div className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive">
             <AlertTriangle className="h-4 w-4" />
-            {lowStockProducts.length} product{lowStockProducts.length > 1 ? "s" : ""} need attention
+            {products.length} product{products.length > 1 ? "s" : ""} need attention
           </div>
         )}
       </div>
@@ -76,9 +90,7 @@ export default function LowStockPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Out of Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-destructive">
-              {lowStockProducts.filter((p) => getCriticalLevel(p) === "out").length}
-            </div>
+            <div className="text-3xl font-bold text-destructive">{outOfStock}</div>
             <p className="text-xs text-muted-foreground">Products with zero stock</p>
           </CardContent>
         </Card>
@@ -88,9 +100,7 @@ export default function LowStockPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Critical</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-warning">
-              {lowStockProducts.filter((p) => getCriticalLevel(p) === "critical").length}
-            </div>
+            <div className="text-3xl font-bold text-warning">{critical}</div>
             <p className="text-xs text-muted-foreground">Below 50% of limit</p>
           </CardContent>
         </Card>
@@ -100,9 +110,7 @@ export default function LowStockPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {lowStockProducts.filter((p) => getCriticalLevel(p) === "low").length}
-            </div>
+            <div className="text-3xl font-bold text-primary">{low}</div>
             <p className="text-xs text-muted-foreground">At or below limit</p>
           </CardContent>
         </Card>
@@ -114,7 +122,7 @@ export default function LowStockPage() {
           <CardTitle className="text-base font-medium">Products Below Stock Limit</CardTitle>
         </CardHeader>
         <CardContent>
-          {lowStockProducts.length === 0 ? (
+          {products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="rounded-full bg-success/10 p-4">
                 <Package className="h-8 w-8 text-success" />
@@ -138,17 +146,16 @@ export default function LowStockPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lowStockProducts
+                {products
                   .sort((a, b) => {
                     const levelOrder = { out: 0, critical: 1, low: 2 };
                     return levelOrder[getCriticalLevel(a)] - levelOrder[getCriticalLevel(b)];
                   })
                   .map((product) => {
-                    const category = categories.find((c) => c.id === product.categoryId);
                     const currentStock = getCurrentStock(product);
                     const level = getCriticalLevel(product);
-                    const unitsNeeded = product.stockLimit - currentStock + 10; // Restock to limit + buffer
-                    const restockCost = unitsNeeded * product.costPrice;
+                    const unitsNeeded = product.stock_limit - currentStock + 10;
+                    const restockCost = unitsNeeded * parseFloat(product.cost_price?.toString() || "0");
 
                     return (
                       <TableRow key={product.id}>
@@ -176,7 +183,7 @@ export default function LowStockPage() {
                         </TableCell>
                         <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {category?.name || "-"}
+                          {product.category_name || "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           <span
@@ -192,7 +199,7 @@ export default function LowStockPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {product.stockLimit}
+                          {product.stock_limit}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {formatCurrency(restockCost)}
@@ -235,7 +242,7 @@ export default function LowStockPage() {
               <div className="rounded-xl bg-muted p-4">
                 <p className="font-medium text-foreground">{restockingProduct.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  Current stock: {getCurrentStock(restockingProduct)} | Limit: {restockingProduct.stockLimit}
+                  Current stock: {getCurrentStock(restockingProduct)} | Limit: {restockingProduct.stock_limit}
                 </p>
               </div>
 
@@ -252,7 +259,7 @@ export default function LowStockPage() {
                 />
                 {restockQuantity && parseInt(restockQuantity) > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Cost: {formatCurrency(parseInt(restockQuantity) * restockingProduct.costPrice)}
+                    Cost: {formatCurrency(parseInt(restockQuantity) * parseFloat(restockingProduct.cost_price?.toString() || "0"))}
                   </p>
                 )}
               </div>
@@ -267,9 +274,10 @@ export default function LowStockPage() {
                 </Button>
                 <Button
                   onClick={handleRestock}
-                  disabled={!restockQuantity || parseInt(restockQuantity) <= 0}
+                  disabled={!restockQuantity || parseInt(restockQuantity) <= 0 || isSubmitting}
                   className="gap-2 rounded-xl"
                 >
+                  {isSubmitting && <Spinner className="h-4 w-4" />}
                   <Plus className="h-4 w-4" />
                   Add Stock
                 </Button>

@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useInventory } from "@/components/inventory-context";
 import {
   BarChart,
   Bar,
@@ -13,40 +12,37 @@ import {
   Legend,
 } from "recharts";
 
-export function StockChart() {
-  const { stockMovements, products } = useInventory();
+interface StockChartProps {
+  stockData: { date: string; type: string; quantity: number }[];
+}
 
-  // Group stock movements by day for the last 7 days
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    date.setHours(0, 0, 0, 0);
-    return date;
+export function StockChart({ stockData }: StockChartProps) {
+  // Transform data - group by date and separate in/out
+  const groupedData: Record<string, { date: string; stockIn: number; stockOut: number }> = {};
+  
+  stockData.forEach((item) => {
+    const dateStr = new Date(item.date).toLocaleDateString("en-US", { weekday: "short" });
+    if (!groupedData[dateStr]) {
+      groupedData[dateStr] = { date: dateStr, stockIn: 0, stockOut: 0 };
+    }
+    if (item.type === "in") {
+      groupedData[dateStr].stockIn += parseInt(item.quantity?.toString() || "0");
+    } else {
+      groupedData[dateStr].stockOut += parseInt(item.quantity?.toString() || "0");
+    }
   });
 
-  const chartData = last7Days.map((date) => {
-    const dayStart = new Date(date);
-    const dayEnd = new Date(date);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+  let chartData = Object.values(groupedData);
 
-    const dayMovements = stockMovements.filter((movement) => {
-      const movementDate = new Date(movement.createdAt);
-      return movementDate >= dayStart && movementDate < dayEnd;
-    });
-
-    const stockIn = dayMovements
-      .filter((m) => m.type === "in")
-      .reduce((sum, m) => sum + m.quantity, 0);
-    const stockOut = dayMovements
-      .filter((m) => m.type === "out")
-      .reduce((sum, m) => sum + m.quantity, 0);
-
-    return {
-      date: date.toLocaleDateString("en-US", { weekday: "short" }),
-      stockIn,
-      stockOut,
-    };
-  });
+  // If no data, show placeholder for last 7 days
+  if (chartData.length === 0) {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const today = new Date().getDay();
+    for (let i = 6; i >= 0; i--) {
+      const dayIndex = (today - i + 7) % 7;
+      chartData.push({ date: days[dayIndex], stockIn: 0, stockOut: 0 });
+    }
+  }
 
   return (
     <Card className="rounded-2xl">

@@ -1,35 +1,44 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowRight, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useInventory } from "@/components/inventory-context";
-import { formatCurrency } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { formatCurrency, Sale } from "@/lib/api";
 
-export function RecentSales() {
-  const { sales, products } = useInventory();
+interface RecentSalesProps {
+  sales: Sale[];
+}
 
-  // Get last 5 sales
-  const recentSales = sales.slice(0, 5);
-
+export function RecentSales({ sales }: RecentSalesProps) {
   return (
     <Card className="rounded-2xl">
-      <CardHeader>
-        <CardTitle className="text-base font-medium">Recent Sales</CardTitle>
-        <p className="text-sm text-muted-foreground">Latest transactions</p>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base font-medium">Recent Sales</CardTitle>
+          <p className="text-sm text-muted-foreground">Latest transactions</p>
+        </div>
+        <Link href="/history">
+          <Button variant="ghost" size="sm" className="gap-1">
+            View all
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {recentSales.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">No sales yet</p>
-          ) : (
-            recentSales.map((sale) => {
-              const productNames = sale.products
-                .map((p) => {
-                  const product = products.find((prod) => prod.id === p.productId);
-                  return product?.name || "Unknown";
-                })
-                .join(", ");
-
-              const totalItems = sale.products.reduce((sum, p) => sum + p.quantity, 0);
+        {sales.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="rounded-full bg-muted p-3">
+              <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">No recent sales</p>
+            <p className="text-xs text-muted-foreground">Sales will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {sales.slice(0, 5).map((sale) => {
+              const itemCount = sale.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+              const productNames = sale.items?.map((item) => item.product_name).filter(Boolean).join(", ") || "Items";
 
               return (
                 <div
@@ -39,8 +48,8 @@ export function RecentSales() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{productNames}</p>
                     <p className="text-xs text-muted-foreground">
-                      {totalItems} item{totalItems > 1 ? "s" : ""} •{" "}
-                      {new Date(sale.createdAt).toLocaleDateString("en-US", {
+                      {itemCount} item{itemCount > 1 ? "s" : ""} •{" "}
+                      {new Date(sale.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -49,13 +58,15 @@ export function RecentSales() {
                     </p>
                   </div>
                   <div className="ml-4 text-right">
-                    <p className="text-sm font-semibold text-foreground">{formatCurrency(sale.total)}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatCurrency(parseFloat(sale.total?.toString() || "0"))}
+                    </p>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
