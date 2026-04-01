@@ -180,13 +180,26 @@ export async function deleteProduct(id: string) {
   mutate("/api/dashboard")
 }
 
-export async function restockProduct(id: string, quantity: number) {
+export async function restockProduct(id: string, quantity: number, reason?: string) {
   const res = await fetch(`/api/products/${id}/restock`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quantity }),
+    body: JSON.stringify({ quantity, reason }),
   })
   if (!res.ok) throw new Error("Failed to restock product")
+  mutate((key: string) => key.startsWith("/api/products"))
+  mutate((key: string) => key.startsWith("/api/stock-movements"))
+  mutate("/api/dashboard")
+  return res.json()
+}
+
+export async function adjustStock(id: string, quantity: number, reason?: string) {
+  const res = await fetch(`/api/products/${id}/adjust-stock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ quantity, reason }),
+  })
+  if (!res.ok) throw new Error("Failed to adjust stock")
   mutate((key: string) => key.startsWith("/api/products"))
   mutate((key: string) => key.startsWith("/api/stock-movements"))
   mutate("/api/dashboard")

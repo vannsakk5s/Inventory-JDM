@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
@@ -22,13 +24,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useInventory } from "@/components/inventory-context";
-import { isLowStock } from "@/lib/store";
+import { useDashboard, isLowStock } from "@/lib/api";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Categories", href: "/categories", icon: Tags },
+  { name: "Stock", href: "/stock", icon: Boxes },
   { name: "Point of Sale", href: "/pos", icon: ShoppingCart },
   { name: "History", href: "/history", icon: History },
 ];
@@ -36,9 +38,15 @@ const navigation = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const { products } = useInventory();
+  const { data } = useDashboard();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering theme-dependent content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
-  const lowStockCount = products.filter(isLowStock).length;
+  const lowStockCount = data?.summary?.low_stock_count || 0;
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
@@ -93,30 +101,37 @@ export function AppSidebar() {
 
       {/* Theme Switcher */}
       <div className="border-t border-sidebar-border p-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full justify-start gap-2">
-              {theme === "light" && <Sun className="h-4 w-4" />}
-              {theme === "dark" && <Moon className="h-4 w-4" />}
-              {theme === "system" && <Monitor className="h-4 w-4" />}
-              <span className="capitalize">{theme} Mode</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            <DropdownMenuItem onClick={() => setTheme("light")}>
-              <Sun className="mr-2 h-4 w-4" />
-              Light
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("dark")}>
-              <Moon className="mr-2 h-4 w-4" />
-              Dark
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("system")}>
-              <Monitor className="mr-2 h-4 w-4" />
-              System
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+                {theme === "light" && <Sun className="h-4 w-4" />}
+                {theme === "dark" && <Moon className="h-4 w-4" />}
+                {theme === "system" && <Monitor className="h-4 w-4" />}
+                <span className="capitalize">{theme} Mode</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-40">
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <Sun className="mr-2 h-4 w-4" />
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <Moon className="mr-2 h-4 w-4" />
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <Monitor className="mr-2 h-4 w-4" />
+                System
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button variant="outline" size="sm" className="w-full justify-start gap-2" disabled>
+            <Sun className="h-4 w-4" />
+            <span>Theme</span>
+          </Button>
+        )}
       </div>
     </aside>
   );
