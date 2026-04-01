@@ -100,8 +100,8 @@ export function AppSidebar() {
       </nav>
 
       {/* Theme Switcher */}
-      <div className="border-t border-sidebar-border p-4">
-        {mounted ? (
+      <div className="border-t border-sidebar-border p-4" suppressHydrationWarning>
+        {mounted && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="w-full justify-start gap-2">
@@ -126,11 +126,9 @@ export function AppSidebar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : (
-          <Button variant="outline" size="sm" className="w-full justify-start gap-2" disabled>
-            <Sun className="h-4 w-4" />
-            <span>Theme</span>
-          </Button>
+        )}
+        {!mounted && (
+          <div className="h-9 w-full animate-pulse rounded-md bg-muted" />
         )}
       </div>
     </aside>

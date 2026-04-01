@@ -68,14 +68,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit } = body
+    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
 
     const [product] = await sql`
-      INSERT INTO products (name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_out, stock_limit)
+      INSERT INTO products (name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_out, stock_limit, image_url)
       VALUES (
         ${name}, 
         ${category_id || null}, 
@@ -85,7 +85,8 @@ export async function POST(request: Request) {
         ${selling_price || 0}, 
         ${stock_in || 0},
         0,
-        ${stock_limit || 10}
+        ${stock_limit || 10},
+        ${image_url || null}
       )
       RETURNING *
     `

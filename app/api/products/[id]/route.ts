@@ -29,7 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit } = body
+    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
 
     // Get current product to calculate stock change
     const [currentProduct] = await sql`SELECT * FROM products WHERE id = ${id}`
@@ -47,7 +47,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         cost_price = COALESCE(${cost_price}, cost_price),
         selling_price = COALESCE(${selling_price}, selling_price),
         stock_in = COALESCE(${stock_in}, stock_in),
-        stock_limit = COALESCE(${stock_limit}, stock_limit)
+        stock_limit = COALESCE(${stock_limit}, stock_limit),
+        image_url = COALESCE(${image_url}, image_url)
       WHERE id = ${id}
       RETURNING *
     `

@@ -24,6 +24,7 @@ export interface Product {
   stock_out: number
   stock_limit: number
   current_stock?: number
+  image_url: string | null
   created_at: string
 }
 

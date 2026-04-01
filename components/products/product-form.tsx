@@ -33,6 +33,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     selling_price: product?.selling_price?.toString() || "",
     stock_in: product?.stock_in?.toString() || "0",
     stock_limit: product?.stock_limit?.toString() || "10",
+    image_url: product?.image_url || "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -68,6 +69,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         selling_price: parseFloat(formData.selling_price),
         stock_in: parseInt(formData.stock_in) || 0,
         stock_limit: parseInt(formData.stock_limit) || 10,
+        image_url: formData.image_url.trim() || null,
       };
 
       if (isEditing) {
@@ -201,6 +203,30 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
           />
           {errors.stock_limit && <p className="text-xs text-destructive">{errors.stock_limit}</p>}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="image_url">Product Image URL</Label>
+        <Input
+          id="image_url"
+          type="url"
+          value={formData.image_url}
+          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+          className="rounded-xl"
+          placeholder="https://example.com/image.jpg"
+        />
+        {formData.image_url && (
+          <div className="mt-2">
+            <img
+              src={formData.image_url}
+              alt="Product preview"
+              className="h-20 w-20 rounded-lg object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
