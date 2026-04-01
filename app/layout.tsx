@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
-
+import { InventoryProvider } from '@/components/inventory-context'
 import { AppSidebar } from '@/components/app-sidebar'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -46,12 +46,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex h-screen overflow-hidden">
-            <AppSidebar />
-            <main className="flex-1 overflow-auto bg-background p-6">
-              {children}
-            </main>
-          </div>
+          <InventoryProvider>
+            <div className="flex h-screen overflow-hidden">
+              <AppSidebar />
+              <main className="flex-1 overflow-auto bg-background p-6">
+                {children}
+              </main>
+            </div>
+          </InventoryProvider>
         </ThemeProvider>
         <Analytics />
       </body>
