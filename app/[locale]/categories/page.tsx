@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Edit2, Trash2, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useCategories, createCategory, updateCategory, deleteCategory, Category } from "@/lib/api";
 
 export default function CategoriesPage() {
+  const t = useTranslations("Categories");
   const { categories, isLoading } = useCategories();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -63,7 +65,7 @@ export default function CategoriesPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.name.trim()) newErrors.name = t("nameRequired");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -120,8 +122,8 @@ export default function CategoriesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Categories</h1>
-          <p className="text-sm text-muted-foreground">Organize your products into categories</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Dialog
           open={isAddDialogOpen}
@@ -133,40 +135,40 @@ export default function CategoriesPage() {
           <DialogTrigger asChild>
             <Button className="gap-2 rounded-xl">
               <Plus className="h-4 w-4" />
-              Add Category
+              {t("addCategory")}
             </Button>
           </DialogTrigger>
           <DialogContent className="rounded-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Category</DialogTitle>
+              <DialogTitle>{t("addNewCategory")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Category Name</Label>
+                <Label htmlFor="name">{t("categoryName")}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="rounded-xl"
-                  placeholder="Enter category name"
+                  placeholder={t("enterCategoryName")}
                 />
                 {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t("description")}</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="rounded-xl"
-                  placeholder="Enter category description (optional)"
+                  placeholder={t("enterDescription")}
                   rows={3}
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
                   {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-                  Add Category
+                  {t("addCategory")}
                 </Button>
               </div>
             </form>
@@ -178,7 +180,7 @@ export default function CategoriesPage() {
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-base font-medium">
-            {categories.length} Categor{categories.length !== 1 ? "ies" : "y"}
+            {categories.length} {categories.length !== 1 ? t("categoriesCount") : t("categoryCount")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -187,20 +189,20 @@ export default function CategoriesPage() {
               <div className="rounded-full bg-muted p-4">
                 <Tags className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="mt-4 text-sm font-medium text-foreground">No categories yet</p>
+              <p className="mt-4 text-sm font-medium text-foreground">{t("noCategories")}</p>
               <p className="text-xs text-muted-foreground">
-                Add your first category to organize products
+                {t("addFirstCategory")}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Products</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("name")}</TableHead>
+                  <TableHead>{t("description")}</TableHead>
+                  <TableHead className="text-center">{t("products")}</TableHead>
+                  <TableHead>{t("created")}</TableHead>
+                  <TableHead className="text-right">{t("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -250,35 +252,35 @@ export default function CategoriesPage() {
       <Dialog open={!!editingCategory} onOpenChange={(open) => !open && closeDialogs()}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
+            <DialogTitle>{t("editCategory")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Category Name</Label>
+              <Label htmlFor="edit-name">{t("categoryName")}</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="rounded-xl"
-                placeholder="Enter category name"
+                placeholder={t("enterCategoryName")}
               />
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">{t("description")}</Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="rounded-xl"
-                placeholder="Enter category description (optional)"
+                placeholder={t("enterDescription")}
                 rows={3}
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
                 {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-                Save Changes
+                {t("saveChanges")}
               </Button>
             </div>
           </form>
@@ -292,26 +294,25 @@ export default function CategoriesPage() {
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteCategory")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingCategory?.name}&quot;?
+              {t("confirmDelete")} &quot;{deletingCategory?.name}&quot;?
               {(deletingCategory?.product_count || 0) > 0 && (
                 <span className="mt-2 block text-destructive">
-                  Warning: This category has {deletingCategory?.product_count} product(s)
-                  associated with it.
+                  {t("warningProducts")}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg">{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isSubmitting}
             >
               {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

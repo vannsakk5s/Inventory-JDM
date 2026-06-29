@@ -14,6 +14,8 @@ export interface Category {
 export interface Product {
   id: string
   name: string
+  name_en?: string
+  name_kh?: string
   category_id: string | null
   category_name?: string
   barcode: string | null
@@ -36,6 +38,7 @@ export interface Sale {
     id: string
     product_id: string
     product_name: string
+    product_name_kh?: string
     quantity: number
     price: number
   }[]
@@ -45,6 +48,7 @@ export interface StockMovement {
   id: string
   product_id: string
   product_name?: string
+  product_name_kh?: string
   type: "in" | "out"
   quantity: number
   created_at: string
@@ -69,9 +73,9 @@ export interface DashboardData {
 export function useCategories() {
   const { data, error, isLoading } = useSWR<Category[]>("/api/categories", fetcher)
   return {
-    categories: data || [],
+    categories: Array.isArray(data) ? data : [],
     isLoading,
-    isError: error,
+    isError: error || (data && !Array.isArray(data)),
   }
 }
 
@@ -85,30 +89,38 @@ export function useProducts(options?: { category?: string; lowStock?: boolean; s
   const { data, error, isLoading } = useSWR<Product[]>(url, fetcher)
   
   return {
-    products: data || [],
+    products: Array.isArray(data) ? data : [],
     isLoading,
-    isError: error,
+    isError: error || (data && !Array.isArray(data)),
   }
 }
 
-export function useSales(days: number = 7) {
-  const { data, error, isLoading } = useSWR<Sale[]>(`/api/sales?days=${days}`, fetcher)
+export function useSales(days?: number, from?: string, to?: string) {
+  const params = new URLSearchParams()
+  if (days) params.set("days", days.toString())
+  if (from) params.set("from", from)
+  if (to) params.set("to", to)
+  
+  const { data, error, isLoading } = useSWR<Sale[]>(`/api/sales?${params.toString()}`, fetcher)
   return {
-    sales: data || [],
+    sales: Array.isArray(data) ? data : [],
     isLoading,
-    isError: error,
+    isError: error || (data && !Array.isArray(data)),
   }
 }
 
-export function useStockMovements(days: number = 7, type?: string) {
-  const params = new URLSearchParams({ days: days.toString() })
+export function useStockMovements(days?: number, type?: string, from?: string, to?: string) {
+  const params = new URLSearchParams()
+  if (days) params.set("days", days.toString())
   if (type) params.set("type", type)
+  if (from) params.set("from", from)
+  if (to) params.set("to", to)
   
   const { data, error, isLoading } = useSWR<StockMovement[]>(`/api/stock-movements?${params.toString()}`, fetcher)
   return {
-    movements: data || [],
+    movements: Array.isArray(data) ? data : [],
     isLoading,
-    isError: error,
+    isError: error || (data && !Array.isArray(data)),
   }
 }
 
@@ -224,8 +236,8 @@ export async function createSale(items: { product_id: string; quantity: number; 
 // Utility functions
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount)
 }
 

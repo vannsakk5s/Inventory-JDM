@@ -1,7 +1,7 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function GET(request: Request) {
   try {
@@ -16,6 +16,7 @@ export async function GET(request: Request) {
       products = await sql`
         SELECT 
           p.*,
+          p.name_en as name,
           c.name as category_name,
           (p.stock_in - p.stock_out) as current_stock
         FROM products p
@@ -27,34 +28,37 @@ export async function GET(request: Request) {
       products = await sql`
         SELECT 
           p.*,
+          p.name_en as name,
           c.name as category_name,
           (p.stock_in - p.stock_out) as current_stock
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
         WHERE p.category_id = ${category}
-        ORDER BY p.name
+        ORDER BY p.name_en
       `
     } else if (search) {
       const searchTerm = `%${search}%`
       products = await sql`
         SELECT 
           p.*,
+          p.name_en as name,
           c.name as category_name,
           (p.stock_in - p.stock_out) as current_stock
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
-        WHERE p.name ILIKE ${searchTerm} OR p.barcode ILIKE ${searchTerm}
-        ORDER BY p.name
+        WHERE p.name_en ILIKE ${searchTerm} OR p.barcode ILIKE ${searchTerm}
+        ORDER BY p.name_en
       `
     } else {
       products = await sql`
         SELECT 
           p.*,
+          p.name_en as name,
           c.name as category_name,
           (p.stock_in - p.stock_out) as current_stock
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
-        ORDER BY p.name
+        ORDER BY p.name_en
       `
     }
     
@@ -68,16 +72,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
+    const { name_en, name_kh, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
 
-    if (!name) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 })
+    if (!name_en && !name_kh) {
+      return NextResponse.json({ error: "At least one name is required" }, { status: 400 })
     }
 
     const [product] = await sql`
-      INSERT INTO products (name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_out, stock_limit, image_url)
+      INSERT INTO products (name_en, name_kh, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_out, stock_limit, image_url)
       VALUES (
-        ${name}, 
+        ${name_en || null}, 
+        ${name_kh || null},
         ${category_id || null}, 
         ${barcode || null}, 
         ${made_in || null}, 
@@ -88,7 +93,7 @@ export async function POST(request: Request) {
         ${stock_limit || 10},
         ${image_url || null}
       )
-      RETURNING *
+      RETURNING *, name_en as name
     `
 
     // Record the initial stock movement if there's stock

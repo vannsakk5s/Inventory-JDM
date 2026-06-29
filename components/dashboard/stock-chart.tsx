@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart,
@@ -17,38 +18,36 @@ interface StockChartProps {
 }
 
 export function StockChart({ stockData }: StockChartProps) {
-  // Transform data - group by date and separate in/out
-  const groupedData: Record<string, { date: string; stockIn: number; stockOut: number }> = {};
+  const t = useTranslations("Dashboard");
+
+  // Initialize with the last 7 days chronologically
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const today = new Date().getDay();
+  const chartData: { date: string; stockIn: number; stockOut: number }[] = [];
   
+  for (let i = 6; i >= 0; i--) {
+    const dayIndex = (today - i + 7) % 7;
+    chartData.push({ date: days[dayIndex], stockIn: 0, stockOut: 0 });
+  }
+
+  const chartDataMap = Object.fromEntries(chartData.map(item => [item.date, item]));
+
   stockData.forEach((item) => {
     const dateStr = new Date(item.date).toLocaleDateString("en-US", { weekday: "short" });
-    if (!groupedData[dateStr]) {
-      groupedData[dateStr] = { date: dateStr, stockIn: 0, stockOut: 0 };
-    }
-    if (item.type === "in") {
-      groupedData[dateStr].stockIn += parseInt(item.quantity?.toString() || "0");
-    } else {
-      groupedData[dateStr].stockOut += parseInt(item.quantity?.toString() || "0");
+    if (chartDataMap[dateStr]) {
+      if (item.type === "in") {
+        chartDataMap[dateStr].stockIn += parseInt(item.quantity?.toString() || "0");
+      } else {
+        chartDataMap[dateStr].stockOut += parseInt(item.quantity?.toString() || "0");
+      }
     }
   });
-
-  let chartData = Object.values(groupedData);
-
-  // If no data, show placeholder for last 7 days
-  if (chartData.length === 0) {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const today = new Date().getDay();
-    for (let i = 6; i >= 0; i--) {
-      const dayIndex = (today - i + 7) % 7;
-      chartData.push({ date: days[dayIndex], stockIn: 0, stockOut: 0 });
-    }
-  }
 
   return (
     <Card className="rounded-2xl">
       <CardHeader>
-        <CardTitle className="text-base font-medium">Stock Movement</CardTitle>
-        <p className="text-sm text-muted-foreground">Last 7 days</p>
+        <CardTitle className="text-base font-medium">{t("stockMovement")}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t("last7Days")}</p>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -78,8 +77,8 @@ export function StockChart({ stockData }: StockChartProps) {
                 labelStyle={{ color: "oklch(0.95 0 0)" }}
               />
               <Legend />
-              <Bar dataKey="stockIn" name="Stock In" fill="oklch(0.65 0.18 145)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="stockOut" name="Stock Out" fill="oklch(0.75 0.15 85)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="stockIn" name={t("stockIn")} fill="oklch(0.65 0.18 145)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="stockOut" name={t("stockOut")} fill="oklch(0.75 0.15 85)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

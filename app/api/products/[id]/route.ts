@@ -1,7 +1,7 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,6 +9,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const [product] = await sql`
       SELECT 
         p.*,
+        p.name_en as name,
         c.name as category_name,
         (p.stock_in - p.stock_out) as current_stock
       FROM products p
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
+    const { name_en, name_kh, category_id, barcode, made_in, cost_price, selling_price, stock_in, stock_limit, image_url } = body
 
     // Get current product to calculate stock change
     const [currentProduct] = await sql`SELECT * FROM products WHERE id = ${id}`
@@ -40,17 +41,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const [product] = await sql`
       UPDATE products
       SET 
-        name = COALESCE(${name}, name),
-        category_id = COALESCE(${category_id}, category_id),
-        barcode = COALESCE(${barcode}, barcode),
-        made_in = COALESCE(${made_in}, made_in),
+        name_en = CASE WHEN ${name_en} IS NOT NULL THEN ${name_en || null} ELSE name_en END,
+        name_kh = CASE WHEN ${name_kh !== undefined ? name_kh : null}::text IS NOT NULL THEN ${name_kh || null} ELSE name_kh END,
+        category_id = COALESCE(${category_id || null}, category_id),
+        barcode = COALESCE(${barcode || null}, barcode),
+        made_in = COALESCE(${made_in || null}, made_in),
         cost_price = COALESCE(${cost_price}, cost_price),
         selling_price = COALESCE(${selling_price}, selling_price),
         stock_in = COALESCE(${stock_in}, stock_in),
         stock_limit = COALESCE(${stock_limit}, stock_limit),
-        image_url = COALESCE(${image_url}, image_url)
+        image_url = COALESCE(${image_url || null}, image_url)
       WHERE id = ${id}
-      RETURNING *
+      RETURNING *, name_en as name
     `
 
     // Record stock movement if stock changed

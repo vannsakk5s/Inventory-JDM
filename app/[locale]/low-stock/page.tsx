@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Package, Plus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useProducts, restockProduct, formatCurrency, getCurrentStock, Product } from "@/lib/api";
 
 export default function LowStockPage() {
+  const t = useTranslations("LowStock");
   const { products, isLoading } = useProducts({ lowStock: true });
   const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
   const [restockQuantity, setRestockQuantity] = useState("");
@@ -72,13 +74,13 @@ export default function LowStockPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Low Stock Alerts</h1>
-          <p className="text-sm text-muted-foreground">Products that need restocking</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         {products.length > 0 && (
           <div className="flex items-center gap-2 rounded-xl bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive">
             <AlertTriangle className="h-4 w-4" />
-            {products.length} product{products.length > 1 ? "s" : ""} need attention
+            {products.length} {products.length > 1 ? t("productsCount") : t("productCount")} {t("needAttention")}
           </div>
         )}
       </div>
@@ -87,31 +89,31 @@ export default function LowStockPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="rounded-2xl border-destructive/20 bg-destructive/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Out of Stock</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("outOfStock")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-destructive">{outOfStock}</div>
-            <p className="text-xs text-muted-foreground">Products with zero stock</p>
+            <p className="text-xs text-muted-foreground">{t("zeroStockDesc")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl border-warning/20 bg-warning/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Critical</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("critical")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-warning">{critical}</div>
-            <p className="text-xs text-muted-foreground">Below 50% of limit</p>
+            <p className="text-xs text-muted-foreground">{t("criticalDesc")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("lowStock")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">{low}</div>
-            <p className="text-xs text-muted-foreground">At or below limit</p>
+            <p className="text-xs text-muted-foreground">{t("lowStockDesc")}</p>
           </CardContent>
         </Card>
       </div>
@@ -119,7 +121,7 @@ export default function LowStockPage() {
       {/* Low Stock Table */}
       <Card className="rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-base font-medium">Products Below Stock Limit</CardTitle>
+          <CardTitle className="text-base font-medium">{t("tableTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
@@ -127,22 +129,22 @@ export default function LowStockPage() {
               <div className="rounded-full bg-success/10 p-4">
                 <Package className="h-8 w-8 text-success" />
               </div>
-              <p className="mt-4 text-sm font-medium text-foreground">All products are well stocked!</p>
+              <p className="mt-4 text-sm font-medium text-foreground">{t("allWellStocked")}</p>
               <p className="text-xs text-muted-foreground">
-                No products are currently below their stock limit
+                {t("noBelowLimit")}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Current Stock</TableHead>
-                  <TableHead className="text-right">Stock Limit</TableHead>
-                  <TableHead className="text-right">Cost to Restock</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{t("status")}</TableHead>
+                  <TableHead>{t("product")}</TableHead>
+                  <TableHead>{t("category")}</TableHead>
+                  <TableHead className="text-right">{t("currentStock")}</TableHead>
+                  <TableHead className="text-right">{t("stockLimit")}</TableHead>
+                  <TableHead className="text-right">{t("costToRestock")}</TableHead>
+                  <TableHead className="text-right">{t("action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -178,7 +180,7 @@ export default function LowStockPage() {
                                   : "bg-primary"
                               }`}
                             />
-                            {level === "out" ? "Out of Stock" : level === "critical" ? "Critical" : "Low"}
+                            {level === "out" ? t("outOfStock") : level === "critical" ? t("critical") : t("low")}
                           </span>
                         </TableCell>
                         <TableCell className="font-medium">{product.name}</TableCell>
@@ -203,7 +205,7 @@ export default function LowStockPage() {
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {formatCurrency(restockCost)}
-                          <span className="ml-1 text-xs">({unitsNeeded} units)</span>
+                          <span className="ml-1 text-xs">({unitsNeeded} {t("units")})</span>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -216,7 +218,7 @@ export default function LowStockPage() {
                             }}
                           >
                             <Plus className="h-3 w-3" />
-                            Restock
+                            {t("restock")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -234,7 +236,7 @@ export default function LowStockPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-success" />
-              Restock Product
+              {t("restockProduct")}
             </DialogTitle>
           </DialogHeader>
           {restockingProduct && (
@@ -242,12 +244,12 @@ export default function LowStockPage() {
               <div className="rounded-xl bg-muted p-4">
                 <p className="font-medium text-foreground">{restockingProduct.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  Current stock: {getCurrentStock(restockingProduct)} | Limit: {restockingProduct.stock_limit}
+                  {t("currentStockLabel")} {getCurrentStock(restockingProduct)} | {t("limitLabel")} {restockingProduct.stock_limit}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity to Add</Label>
+                <Label htmlFor="quantity">{t("quantityToAdd")}</Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -255,11 +257,11 @@ export default function LowStockPage() {
                   value={restockQuantity}
                   onChange={(e) => setRestockQuantity(e.target.value)}
                   className="rounded-xl"
-                  placeholder="Enter quantity"
+                  placeholder={t("enterQuantity")}
                 />
                 {restockQuantity && parseInt(restockQuantity) > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Cost: {formatCurrency(parseInt(restockQuantity) * parseFloat(restockingProduct.cost_price?.toString() || "0"))}
+                    {t("costLabel")} {formatCurrency(parseInt(restockQuantity) * parseFloat(restockingProduct.cost_price?.toString() || "0"))}
                   </p>
                 )}
               </div>
@@ -270,7 +272,7 @@ export default function LowStockPage() {
                   onClick={() => setRestockingProduct(null)}
                   className="rounded-xl"
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleRestock}
@@ -279,7 +281,7 @@ export default function LowStockPage() {
                 >
                   {isSubmitting && <Spinner className="h-4 w-4" />}
                   <Plus className="h-4 w-4" />
-                  Add Stock
+                  {t("addStock")}
                 </Button>
               </div>
             </div>

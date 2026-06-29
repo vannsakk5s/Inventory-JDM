@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,16 +12,18 @@ interface RecentSalesProps {
 }
 
 export function RecentSales({ sales }: RecentSalesProps) {
+  const t = useTranslations("Dashboard");
+
   return (
     <Card className="rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-base font-medium">Recent Sales</CardTitle>
-          <p className="text-sm text-muted-foreground">Latest transactions</p>
+          <CardTitle className="text-base font-medium">{t("recentSales")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("latestTransactions")}</p>
         </div>
         <Link href="/history">
           <Button variant="ghost" size="sm" className="gap-1">
-            View all
+            {t("viewAll")}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
@@ -31,14 +34,19 @@ export function RecentSales({ sales }: RecentSalesProps) {
             <div className="rounded-full bg-muted p-3">
               <ShoppingCart className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">No recent sales</p>
-            <p className="text-xs text-muted-foreground">Sales will appear here</p>
+            <p className="mt-3 text-sm font-medium text-foreground">{t("noRecentSales")}</p>
+            <p className="text-xs text-muted-foreground">{t("salesWillAppear")}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {sales.slice(0, 5).map((sale) => {
               const itemCount = sale.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-              const productNames = sale.items?.map((item) => item.product_name).filter(Boolean).join(", ") || "Items";
+              const productNames = sale.items?.map((item) => {
+                const en = item.product_name || "";
+                const kh = item.product_name_kh || "";
+                const nameStr = [en, kh].filter(Boolean).join(" - ");
+                return `${nameStr} (x${item.quantity})`;
+              }).join(", ") || "Items";
 
               return (
                 <div

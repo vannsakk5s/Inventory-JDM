@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Package, TrendingUp, DollarSign, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -11,6 +12,7 @@ import { LowStockAlert } from "@/components/dashboard/low-stock-alert";
 import { useProducts, useSales, useStockMovements, formatCurrency, getCurrentStock, isLowStock } from "@/lib/api";
 
 export default function DashboardPage() {
+  const t = useTranslations("Dashboard");
   const { products, isLoading: productsLoading } = useProducts();
   const { sales, isLoading: salesLoading } = useSales(7);
   const { movements, isLoading: movementsLoading } = useStockMovements(7);
@@ -63,7 +65,7 @@ export default function DashboardPage() {
       const revenue = daySales.reduce((sum, sale) => sum + parseFloat(sale.total?.toString() || "0"), 0);
 
       return {
-        date: date.toISOString().split("T")[0],
+        date: date.toISOString(),
         revenue,
       };
     });
@@ -90,55 +92,55 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of your inventory and sales</p>
+        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Products</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("totalProducts")}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{metrics.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">{metrics.totalStock} units in stock</p>
+            <p className="text-xs text-muted-foreground">{metrics.totalStock} {t("unitsInStock")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("lowStock")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${metrics.lowStockCount > 0 ? "text-destructive" : "text-foreground"}`}>
               {metrics.lowStockCount}
             </div>
-            <p className="text-xs text-muted-foreground">Products need restocking</p>
+            <p className="text-xs text-muted-foreground">{t("needRestocking")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Today&apos;s Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("todaysRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{formatCurrency(metrics.todayRevenue)}</div>
-            <p className="text-xs text-muted-foreground">From sales today</p>
+            <p className="text-xs text-muted-foreground">{t("fromSalesToday")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Weekly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("weeklyRevenue")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{formatCurrency(metrics.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Last 7 days</p>
+            <p className="text-xs text-muted-foreground">{t("last7Days")}</p>
           </CardContent>
         </Card>
       </div>

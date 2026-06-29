@@ -1,7 +1,7 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {

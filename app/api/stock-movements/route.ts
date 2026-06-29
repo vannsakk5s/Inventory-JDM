@@ -1,13 +1,22 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get("days") || "7")
     const type = searchParams.get("type")
+    const from = searchParams.get("from")
+    const to = searchParams.get("to")
+    
+    let timeFilter;
+    if (from && to) {
+      timeFilter = sql`sm.created_at >= ${from}::timestamp AND sm.created_at <= ${to}::timestamp + interval '1 day'`
+    } else {
+      timeFilter = sql`sm.created_at >= NOW() - INTERVAL '1 day' * ${days}`
+    }
     
     let movements
     
@@ -15,10 +24,10 @@ export async function GET(request: Request) {
       movements = await sql`
         SELECT 
           sm.*,
-          p.name as product_name
+          p.name_en as product_name
         FROM stock_movements sm
         LEFT JOIN products p ON p.id = sm.product_id
-        WHERE sm.created_at >= NOW() - INTERVAL '1 day' * ${days}
+        WHERE ${timeFilter}
           AND sm.type = ${type}
         ORDER BY sm.created_at DESC
       `
@@ -26,10 +35,10 @@ export async function GET(request: Request) {
       movements = await sql`
         SELECT 
           sm.*,
-          p.name as product_name
+          p.name_en as product_name
         FROM stock_movements sm
         LEFT JOIN products p ON p.id = sm.product_id
-        WHERE sm.created_at >= NOW() - INTERVAL '1 day' * ${days}
+        WHERE ${timeFilter}
         ORDER BY sm.created_at DESC
       `
     }

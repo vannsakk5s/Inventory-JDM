@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Search, Edit2, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ import { useProducts, useCategories, deleteProduct, formatCurrency, getCurrentSt
 import { ProductForm } from "@/components/products/product-form";
 
 export default function ProductsPage() {
+  const t = useTranslations("Products");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -89,19 +91,19 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Products</h1>
-          <p className="text-sm text-muted-foreground">Manage your product inventory</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2 rounded-xl">
               <Plus className="h-4 w-4" />
-              Add Product
+              {t("addProduct")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl rounded-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
+              <DialogTitle>{t("addNewProduct")}</DialogTitle>
             </DialogHeader>
             <ProductForm onSuccess={() => setIsAddDialogOpen(false)} />
           </DialogContent>
@@ -115,7 +117,7 @@ export default function ProductsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name or barcode..."
+                placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -132,10 +134,10 @@ export default function ProductsPage() {
               }}
             >
               <SelectTrigger className="w-full sm:w-48 rounded-xl">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t("allCategories")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t("allCategories")}</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
@@ -151,7 +153,7 @@ export default function ProductsPage() {
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-base font-medium">
-            {filteredProducts.length} Product{filteredProducts.length !== 1 ? "s" : ""}
+            {filteredProducts.length} {filteredProducts.length !== 1 ? t("productsCount") : t("productCount")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -160,11 +162,11 @@ export default function ProductsPage() {
               <div className="rounded-full bg-muted p-4">
                 <Package className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="mt-4 text-sm font-medium text-foreground">No products found</p>
+              <p className="mt-4 text-sm font-medium text-foreground">{t("noProductsFound")}</p>
               <p className="text-xs text-muted-foreground">
                 {search || categoryFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "Add your first product to get started"}
+                  ? t("searchPlaceholder")
+                  : t("addFirstProduct")}
               </p>
             </div>
           ) : (
@@ -173,15 +175,16 @@ export default function ProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-16">Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Barcode</TableHead>
-                      <TableHead>Made In</TableHead>
-                      <TableHead className="text-right">Cost</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-16">{t("image")}</TableHead>
+                      <TableHead>{t("nameEn")}</TableHead>
+                      <TableHead>{t("nameKh")}</TableHead>
+                      <TableHead>{t("category")}</TableHead>
+                      <TableHead>{t("barcode")}</TableHead>
+                      <TableHead>{t("madeIn")}</TableHead>
+                      <TableHead className="text-right">{t("cost")}</TableHead>
+                      <TableHead className="text-right">{t("price")}</TableHead>
+                      <TableHead className="text-right">{t("stock")}</TableHead>
+                      <TableHead className="text-right">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -204,7 +207,8 @@ export default function ProductsPage() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell className="font-medium">{product.name_en || "-"}</TableCell>
+                          <TableCell className="font-medium">{product.name_kh || "-"}</TableCell>
                           <TableCell>{product.category_name || "-"}</TableCell>
                           <TableCell className="font-mono text-xs">{product.barcode || "-"}</TableCell>
                           <TableCell>{product.made_in || "-"}</TableCell>
@@ -256,7 +260,7 @@ export default function ProductsPage() {
               {totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
+                    {t("page")} {currentPage} {t("of")} {totalPages}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -266,7 +270,7 @@ export default function ProductsPage() {
                       disabled={currentPage === 1}
                       className="rounded-lg"
                     >
-                      Previous
+                      {t("previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -275,7 +279,7 @@ export default function ProductsPage() {
                       disabled={currentPage === totalPages}
                       className="rounded-lg"
                     >
-                      Next
+                      {t("next")}
                     </Button>
                   </div>
                 </div>
@@ -289,7 +293,7 @@ export default function ProductsPage() {
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
         <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle>{t("editProduct")}</DialogTitle>
           </DialogHeader>
           {editingProduct && (
             <ProductForm product={editingProduct} onSuccess={() => setEditingProduct(null)} />
@@ -301,19 +305,18 @@ export default function ProductsPage() {
       <AlertDialog open={!!deletingProduct} onOpenChange={(open) => !open && setDeletingProduct(null)}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteProduct")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingProduct?.name}&quot;? This action cannot be
-              undone.
+              {t("confirmDelete")} &quot;{deletingProduct?.name}&quot;? {t("cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg">{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

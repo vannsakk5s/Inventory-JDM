@@ -1,7 +1,7 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
@@ -64,7 +64,8 @@ export async function GET() {
         s.*,
         json_agg(
           json_build_object(
-            'product_name', p.name,
+            'product_name', p.name_en,
+            'product_name_kh', p.name_kh,
             'quantity', si.quantity
           )
         ) as items

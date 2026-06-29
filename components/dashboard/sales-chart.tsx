@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/api";
 import {
@@ -17,6 +18,8 @@ interface SalesChartProps {
 }
 
 export function SalesChart({ salesData }: SalesChartProps) {
+  const t = useTranslations("Dashboard");
+
   // Transform data for chart
   const chartData = salesData.map((item) => ({
     date: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
@@ -36,8 +39,8 @@ export function SalesChart({ salesData }: SalesChartProps) {
   return (
     <Card className="rounded-2xl">
       <CardHeader>
-        <CardTitle className="text-base font-medium">Sales Revenue</CardTitle>
-        <p className="text-sm text-muted-foreground">Last 7 days</p>
+        <CardTitle className="text-base font-medium">{t("salesRevenue")}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t("last7Days")}</p>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -72,7 +75,7 @@ export function SalesChart({ salesData }: SalesChartProps) {
                   boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 }}
                 labelStyle={{ color: "oklch(0.95 0 0)" }}
-                formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                formatter={(value: number) => [formatCurrency(value), t("revenue")]}
               />
               <Area
                 type="monotone"

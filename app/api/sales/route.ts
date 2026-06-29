@@ -1,13 +1,22 @@
-import { neon } from "@neondatabase/serverless"
+import postgres from "postgres"
 import { NextResponse } from "next/server"
 
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const days = parseInt(searchParams.get("days") || "7")
+    const from = searchParams.get("from")
+    const to = searchParams.get("to")
     
+    let timeFilter;
+    if (from && to) {
+      timeFilter = sql`s.created_at >= ${from}::timestamp AND s.created_at <= ${to}::timestamp + interval '1 day'`
+    } else {
+      timeFilter = sql`s.created_at >= NOW() - INTERVAL '1 day' * ${days}`
+    }
+
     const sales = await sql`
       SELECT 
         s.*,
@@ -15,7 +24,8 @@ export async function GET(request: Request) {
           json_build_object(
             'id', si.id,
             'product_id', si.product_id,
-            'product_name', p.name,
+            'product_name', p.name_en,
+            'product_name_kh', p.name_kh,
             'quantity', si.quantity,
             'price', si.price
           )
@@ -23,7 +33,7 @@ export async function GET(request: Request) {
       FROM sales s
       LEFT JOIN sale_items si ON si.sale_id = s.id
       LEFT JOIN products p ON p.id = si.product_id
-      WHERE s.created_at >= NOW() - INTERVAL '1 day' * ${days}
+      WHERE ${timeFilter}
       GROUP BY s.id
       ORDER BY s.created_at DESC
     `

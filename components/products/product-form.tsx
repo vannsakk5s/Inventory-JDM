@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,12 +21,15 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSuccess }: ProductFormProps) {
+  const t = useTranslations("Products");
   const { categories } = useCategories();
   const isEditing = !!product;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: product?.name || "",
+    name_en: product?.name_en || product?.name || "",
+    name_kh: product?.name_kh || "",
     category_id: product?.category_id || "",
     barcode: product?.barcode || "",
     made_in: product?.made_in || "",
@@ -40,7 +44,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.name_en.trim() && !formData.name_kh.trim()) newErrors.name_en = "At least one name is required";
     if (!formData.category_id) newErrors.category_id = "Category is required";
     if (!formData.barcode.trim()) newErrors.barcode = "Barcode is required";
     if (!formData.made_in.trim()) newErrors.made_in = "Country is required";
@@ -61,7 +65,8 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     setIsSubmitting(true);
     try {
       const productData = {
-        name: formData.name.trim(),
+        name_en: formData.name_en.trim(),
+        name_kh: formData.name_kh.trim(),
         category_id: formData.category_id,
         barcode: formData.barcode.trim(),
         made_in: formData.made_in.trim(),
@@ -86,29 +91,66 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!res.ok) throw new Error("Upload failed");
+      
+      const data = await res.json();
+      setFormData((prev) => ({ ...prev, image_url: data.url }));
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      // You could set an error state here if desired
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">Product Name</Label>
+          <Label htmlFor="name_en">{t("nameEnglish")}</Label>
           <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            id="name_en"
+            value={formData.name_en}
+            onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
             className="rounded-xl"
-            placeholder="Enter product name"
+            placeholder={t("enterEnglishName")}
           />
-          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+          {errors.name_en && <p className="text-xs text-destructive">{errors.name_en}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="name_kh">{t("nameKhmer")}</Label>
+          <Input
+            id="name_kh"
+            value={formData.name_kh}
+            onChange={(e) => setFormData({ ...formData, name_kh: e.target.value })}
+            className="rounded-xl"
+            placeholder={t("enterKhmerName")}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category">{t("category")}</Label>
           <Select
             value={formData.category_id}
             onValueChange={(value) => setFormData({ ...formData, category_id: value })}
           >
             <SelectTrigger id="category" className="rounded-xl">
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder={t("selectCategory")} />
             </SelectTrigger>
             <SelectContent>
               {categories.map((category) => (
@@ -122,31 +164,31 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="barcode">Barcode</Label>
+          <Label htmlFor="barcode">{t("barcode")}</Label>
           <Input
             id="barcode"
             value={formData.barcode}
             onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
             className="rounded-xl"
-            placeholder="Enter barcode"
+            placeholder={t("enterBarcode")}
           />
           {errors.barcode && <p className="text-xs text-destructive">{errors.barcode}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="made_in">Made In</Label>
+          <Label htmlFor="made_in">{t("madeIn")}</Label>
           <Input
             id="made_in"
             value={formData.made_in}
             onChange={(e) => setFormData({ ...formData, made_in: e.target.value })}
             className="rounded-xl"
-            placeholder="Country of origin"
+            placeholder={t("countryOfOrigin")}
           />
           {errors.made_in && <p className="text-xs text-destructive">{errors.made_in}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="cost_price">Cost Price ($)</Label>
+          <Label htmlFor="cost_price">{t("costPrice")}</Label>
           <Input
             id="cost_price"
             type="number"
@@ -161,7 +203,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="selling_price">Selling Price ($)</Label>
+          <Label htmlFor="selling_price">{t("sellingPrice")}</Label>
           <Input
             id="selling_price"
             type="number"
@@ -177,7 +219,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
 
         {!isEditing && (
           <div className="space-y-2">
-            <Label htmlFor="stock_in">Initial Stock</Label>
+            <Label htmlFor="stock_in">{t("initialStock")}</Label>
             <Input
               id="stock_in"
               type="number"
@@ -191,7 +233,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="stock_limit">Stock Limit (Alert)</Label>
+          <Label htmlFor="stock_limit">{t("stockLimit")}</Label>
           <Input
             id="stock_limit"
             type="number"
@@ -206,15 +248,18 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="image_url">Product Image URL</Label>
-        <Input
-          id="image_url"
-          type="url"
-          value={formData.image_url}
-          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-          className="rounded-xl"
-          placeholder="https://example.com/image.jpg"
-        />
+        <Label htmlFor="image_url">{t("productImage")}</Label>
+        <div className="flex items-center gap-4">
+          <Input
+            id="image_url"
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="rounded-xl flex-1 cursor-pointer"
+            disabled={isUploadingImage}
+          />
+          {isUploadingImage && <Spinner className="h-5 w-5" />}
+        </div>
         {formData.image_url && (
           <div className="mt-2">
             <img
@@ -232,7 +277,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       <div className="flex justify-end gap-3 pt-4">
         <Button type="submit" className="rounded-xl" disabled={isSubmitting}>
           {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
-          {isEditing ? "Save Changes" : "Add Product"}
+          {isEditing ? t("saveChanges") : t("addProduct")}
         </Button>
       </div>
     </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Search, Package, TrendingUp, TrendingDown, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useProducts, useCategories, restockProduct, adjustStock, getCurrentStock, isLowStock, Product } from "@/lib/api";
 
 export default function StockManagementPage() {
+  const t = useTranslations("Stock");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
@@ -103,44 +105,44 @@ export default function StockManagementPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Stock Management</h1>
-        <p className="text-sm text-muted-foreground">Track and manage your inventory levels</p>
+        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Stock</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("totalStock")}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{totalStock}</div>
-            <p className="text-xs text-muted-foreground">Units in inventory</p>
+            <p className="text-xs text-muted-foreground">{t("unitsInInventory")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Items</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("lowStockItems")}</CardTitle>
             <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{lowStockCount}</div>
-            <p className="text-xs text-muted-foreground">Products need restocking</p>
+            <p className="text-xs text-muted-foreground">{t("needRestocking")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Inventory Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("inventoryValue")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
               ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground">At cost price</p>
+            <p className="text-xs text-muted-foreground">{t("atCostPrice")}</p>
           </CardContent>
         </Card>
       </div>
@@ -152,7 +154,7 @@ export default function StockManagementPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name or barcode..."
+                placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -169,10 +171,10 @@ export default function StockManagementPage() {
               }}
             >
               <SelectTrigger className="w-full sm:w-48 rounded-xl">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder={t("allCategories")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t("allCategories")}</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
@@ -188,7 +190,7 @@ export default function StockManagementPage() {
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-base font-medium">
-            {filteredProducts.length} Product{filteredProducts.length !== 1 ? "s" : ""}
+            {filteredProducts.length} {filteredProducts.length !== 1 ? t("productsCount") : t("productCount")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -197,11 +199,11 @@ export default function StockManagementPage() {
               <div className="rounded-full bg-muted p-4">
                 <Package className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="mt-4 text-sm font-medium text-foreground">No products found</p>
+              <p className="mt-4 text-sm font-medium text-foreground">{t("noProductsFound")}</p>
               <p className="text-xs text-muted-foreground">
                 {search || categoryFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "Add products to manage their stock"}
+                  ? t("searchPlaceholder")
+                  : t("addProductsToManage")}
               </p>
             </div>
           ) : (
@@ -209,13 +211,13 @@ export default function StockManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Stock In</TableHead>
-                    <TableHead className="text-right">Stock Out</TableHead>
-                    <TableHead className="text-right">Current Stock</TableHead>
-                    <TableHead className="text-right">Limit</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("product")}</TableHead>
+                    <TableHead>{t("category")}</TableHead>
+                    <TableHead className="text-right">{t("stockIn")}</TableHead>
+                    <TableHead className="text-right">{t("stockOut")}</TableHead>
+                    <TableHead className="text-right">{t("currentStock")}</TableHead>
+                    <TableHead className="text-right">{t("limit")}</TableHead>
+                    <TableHead className="text-right">{t("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -257,7 +259,7 @@ export default function StockManagementPage() {
                               }}
                             >
                               <Plus className="h-3 w-3" />
-                              In
+                              {t("in")}
                             </Button>
                             <Button
                               variant="outline"
@@ -270,7 +272,7 @@ export default function StockManagementPage() {
                               disabled={currentStock === 0}
                             >
                               <Minus className="h-3 w-3" />
-                              Out
+                              {t("out")}
                             </Button>
                           </div>
                         </TableCell>
@@ -284,7 +286,7 @@ export default function StockManagementPage() {
               {totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
+                    {t("page")} {currentPage} {t("of")} {totalPages}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -294,7 +296,7 @@ export default function StockManagementPage() {
                       disabled={currentPage === 1}
                       className="rounded-lg"
                     >
-                      Previous
+                      {t("previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -303,7 +305,7 @@ export default function StockManagementPage() {
                       disabled={currentPage === totalPages}
                       className="rounded-lg"
                     >
-                      Next
+                      {t("next")}
                     </Button>
                   </div>
                 </div>
@@ -323,7 +325,7 @@ export default function StockManagementPage() {
               ) : (
                 <TrendingDown className="h-5 w-5 text-warning" />
               )}
-              {adjustmentType === "in" ? "Add Stock" : "Remove Stock"}
+              {adjustmentType === "in" ? t("addStock") : t("removeStock")}
             </DialogTitle>
           </DialogHeader>
           {adjustingProduct && (
@@ -331,12 +333,12 @@ export default function StockManagementPage() {
               <div className="rounded-xl bg-muted p-4">
                 <p className="font-medium text-foreground">{adjustingProduct.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  Current stock: {getCurrentStock(adjustingProduct)}
+                  {t("currentStockLabel")} {getCurrentStock(adjustingProduct)}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
+                <Label htmlFor="quantity">{t("quantity")}</Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -345,18 +347,18 @@ export default function StockManagementPage() {
                   value={adjustmentQuantity}
                   onChange={(e) => setAdjustmentQuantity(e.target.value)}
                   className="rounded-xl"
-                  placeholder="Enter quantity"
+                  placeholder={t("enterQuantity")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reason">Reason (Optional)</Label>
+                <Label htmlFor="reason">{t("reason")}</Label>
                 <Input
                   id="reason"
                   value={adjustmentReason}
                   onChange={(e) => setAdjustmentReason(e.target.value)}
                   className="rounded-xl"
-                  placeholder="e.g., New shipment, Damage, Adjustment"
+                  placeholder={t("reasonPlaceholder")}
                 />
               </div>
 
@@ -366,7 +368,7 @@ export default function StockManagementPage() {
                   onClick={() => setAdjustingProduct(null)}
                   className="rounded-xl"
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleAdjustment}
@@ -377,7 +379,7 @@ export default function StockManagementPage() {
                 >
                   {isSubmitting && <Spinner className="h-4 w-4" />}
                   {adjustmentType === "in" ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                  {adjustmentType === "in" ? "Add Stock" : "Remove Stock"}
+                  {adjustmentType === "in" ? t("addStock") : t("removeStock")}
                 </Button>
               </div>
             </div>

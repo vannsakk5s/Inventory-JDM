@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Package } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { TrendingUp, TrendingDown, DollarSign, Package } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,13 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Spinner } from "@/components/ui/spinner";
 import { useSales, useStockMovements, formatCurrency } from "@/lib/api";
 import {
@@ -35,26 +32,29 @@ import {
   Legend,
 } from "recharts";
 
-type TimeFilter = "3" | "7" | "30" | "90" | "180" | "365";
 
-const timeFilters: { value: TimeFilter; label: string }[] = [
-  { value: "3", label: "3 Days" },
-  { value: "7", label: "7 Days" },
-  { value: "30", label: "1 Month" },
-  { value: "90", label: "3 Months" },
-  { value: "180", label: "6 Months" },
-  { value: "365", label: "1 Year" },
-];
 
 export default function HistoryPage() {
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("7");
+  const t = useTranslations("History");
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    to: new Date(),
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [movementPage, setMovementPage] = useState(1);
   const itemsPerPage = 10;
 
-  const days = parseInt(timeFilter);
-  const { sales, isLoading: salesLoading } = useSales(days);
-  const { movements, isLoading: movementsLoading } = useStockMovements(days);
+  const fromStr = date?.from ? date.from.toISOString() : undefined;
+  const toStr = date?.to ? date.to.toISOString() : undefined;
+  
+  const daysDiff = date?.from && date?.to 
+    ? Math.max(1, Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24)))
+    : 7;
+
+  const { sales, isLoading: salesLoading } = useSales(daysDiff, fromStr, toStr);
+  const { movements, isLoading: movementsLoading } = useStockMovements(daysDiff, undefined, fromStr, toStr);
+  
+  const days = daysDiff;
 
   const isLoading = salesLoading || movementsLoading;
 
@@ -131,74 +131,65 @@ export default function HistoryPage() {
     );
   }
 
-  const selectedFilter = timeFilters.find((f) => f.value === timeFilter)!;
+
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">History & Reports</h1>
-          <p className="text-sm text-muted-foreground">View sales and stock movement history</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Select value={timeFilter} onValueChange={(value: TimeFilter) => setTimeFilter(value)}>
-          <SelectTrigger className="w-40 rounded-xl">
-            <Calendar className="mr-2 h-4 w-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {timeFilters.map((filter) => (
-              <SelectItem key={filter.value} value={filter.value}>
-                {filter.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <DatePickerWithRange date={date} setDate={setDate} />
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("totalRevenue")}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Last {selectedFilter.label.toLowerCase()}</p>
+            <p className="text-xs text-muted-foreground">
+              {date?.from ? date.from.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+              {date?.to ? " - " + date.to.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("transactions")}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{totalTransactions}</div>
-            <p className="text-xs text-muted-foreground">Sales completed</p>
+            <p className="text-xs text-muted-foreground">{t("salesCompleted")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Stock In</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("stockIn")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{totalStockIn}</div>
-            <p className="text-xs text-muted-foreground">Units received</p>
+            <p className="text-xs text-muted-foreground">{t("unitsReceived")}</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Stock Out</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("stockOut")}</CardTitle>
             <TrendingDown className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{totalStockOut}</div>
-            <p className="text-xs text-muted-foreground">Units sold/moved</p>
+            <p className="text-xs text-muted-foreground">{t("unitsSold")}</p>
           </CardContent>
         </Card>
       </div>
@@ -207,7 +198,7 @@ export default function HistoryPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Revenue Trend</CardTitle>
+            <CardTitle className="text-base font-medium">{t("revenueTrend")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -229,7 +220,7 @@ export default function HistoryPage() {
                       borderRadius: "12px",
                     }}
                     labelStyle={{ color: "oklch(0.95 0 0)" }}
-                    formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                    formatter={(value: number) => [formatCurrency(value), t("revenue")]}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="oklch(0.65 0.2 250)" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue2)" />
                 </AreaChart>
@@ -240,7 +231,7 @@ export default function HistoryPage() {
 
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Stock Movement</CardTitle>
+            <CardTitle className="text-base font-medium">{t("stockMovement")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -258,8 +249,8 @@ export default function HistoryPage() {
                     labelStyle={{ color: "oklch(0.95 0 0)" }}
                   />
                   <Legend />
-                  <Bar dataKey="stockIn" name="Stock In" fill="oklch(0.65 0.18 145)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="stockOut" name="Stock Out" fill="oklch(0.75 0.15 85)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="stockIn" name={t("stockIn")} fill="oklch(0.65 0.18 145)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="stockOut" name={t("stockOut")} fill="oklch(0.75 0.15 85)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -270,36 +261,41 @@ export default function HistoryPage() {
       {/* Data Tables */}
       <Tabs defaultValue="sales" className="space-y-4">
         <TabsList className="rounded-xl">
-          <TabsTrigger value="sales" className="rounded-lg">Sales History</TabsTrigger>
-          <TabsTrigger value="stock" className="rounded-lg">Stock Movements</TabsTrigger>
+          <TabsTrigger value="sales" className="rounded-lg">{t("salesHistory")}</TabsTrigger>
+          <TabsTrigger value="stock" className="rounded-lg">{t("stockMovements")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales">
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {sales.length} Sale{sales.length !== 1 ? "s" : ""}
+                {sales.length} {sales.length !== 1 ? t("salesCount") : t("saleCount")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {sales.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-sm text-muted-foreground">No sales in this period</p>
+                  <p className="text-sm text-muted-foreground">{t("noSales")}</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Products</TableHead>
-                        <TableHead className="text-center">Items</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>{t("date")}</TableHead>
+                        <TableHead>{t("products")}</TableHead>
+                        <TableHead className="text-center">{t("items")}</TableHead>
+                        <TableHead className="text-right">{t("total")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedSales.map((sale) => {
-                        const productNames = sale.items?.map((p) => p.product_name).filter(Boolean).join(", ") || "Items";
+                        const productNames = sale.items?.map((p) => {
+                          const en = p.product_name || "";
+                          const kh = p.product_name_kh || "";
+                          const nameStr = [en, kh].filter(Boolean).join(" - ");
+                          return `${nameStr} (x${p.quantity})`;
+                        }).join(", ") || "Items";
                         const totalItems = sale.items?.reduce((sum, p) => sum + p.quantity, 0) || 0;
 
                         return (
@@ -327,7 +323,7 @@ export default function HistoryPage() {
                   {totalPages > 1 && (
                     <div className="mt-4 flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        Page {currentPage} of {totalPages}
+                        {t("page")} {currentPage} {t("of")} {totalPages}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -337,7 +333,7 @@ export default function HistoryPage() {
                           disabled={currentPage === 1}
                           className="rounded-lg"
                         >
-                          Previous
+                          {t("previous")}
                         </Button>
                         <Button
                           variant="outline"
@@ -346,7 +342,7 @@ export default function HistoryPage() {
                           disabled={currentPage === totalPages}
                           className="rounded-lg"
                         >
-                          Next
+                          {t("next")}
                         </Button>
                       </div>
                     </div>
@@ -361,23 +357,23 @@ export default function HistoryPage() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {movements.length} Movement{movements.length !== 1 ? "s" : ""}
+                {movements.length} {movements.length !== 1 ? t("movementsCount") : t("movementCount")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {movements.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-sm text-muted-foreground">No stock movements in this period</p>
+                  <p className="text-sm text-muted-foreground">{t("noMovements")}</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
+                        <TableHead>{t("date")}</TableHead>
+                        <TableHead>{t("product")}</TableHead>
+                        <TableHead>{t("type")}</TableHead>
+                        <TableHead className="text-right">{t("quantity")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -390,7 +386,7 @@ export default function HistoryPage() {
                               year: "numeric",
                             })}
                           </TableCell>
-                          <TableCell>{movement.product_name || "Unknown"}</TableCell>
+                          <TableCell>{movement.product_name || t("unknown")}</TableCell>
                           <TableCell>
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -399,7 +395,7 @@ export default function HistoryPage() {
                                   : "bg-warning/10 text-warning"
                               }`}
                             >
-                              {movement.type === "in" ? "Stock In" : "Stock Out"}
+                              {movement.type === "in" ? t("stockIn") : t("stockOut")}
                             </span>
                           </TableCell>
                           <TableCell className="text-right font-medium">
@@ -414,7 +410,7 @@ export default function HistoryPage() {
                   {movementPages > 1 && (
                     <div className="mt-4 flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        Page {movementPage} of {movementPages}
+                        {t("page")} {movementPage} {t("of")} {movementPages}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -424,7 +420,7 @@ export default function HistoryPage() {
                           disabled={movementPage === 1}
                           className="rounded-lg"
                         >
-                          Previous
+                          {t("previous")}
                         </Button>
                         <Button
                           variant="outline"
@@ -433,7 +429,7 @@ export default function HistoryPage() {
                           disabled={movementPage === movementPages}
                           className="rounded-lg"
                         >
-                          Next
+                          {t("next")}
                         </Button>
                       </div>
                     </div>
