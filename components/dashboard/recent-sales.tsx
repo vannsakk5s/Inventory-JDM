@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, Sale } from "@/lib/api";
+import { Sale } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 
 interface RecentSalesProps {
   sales: Sale[];
@@ -13,6 +14,7 @@ interface RecentSalesProps {
 
 export function RecentSales({ sales }: RecentSalesProps) {
   const t = useTranslations("Dashboard");
+  const { formatPrice } = useCurrency();
 
   return (
     <Card className="rounded-2xl">
@@ -67,7 +69,7 @@ export function RecentSales({ sales }: RecentSalesProps) {
                   </div>
                   <div className="ml-4 text-right">
                     <p className="text-sm font-semibold text-foreground">
-                      {formatCurrency(parseFloat(sale.total?.toString() || "0"))}
+                      {formatPrice(parseFloat(sale.total?.toString() || "0"))}
                     </p>
                   </div>
                 </div>

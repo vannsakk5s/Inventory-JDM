@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useProducts, useCategories, createSale, formatCurrency, getCurrentStock, Product } from "@/lib/api";
+import { useProducts, useCategories, createSale, getCurrentStock, Product } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 
 interface CartItem {
   product: Product;
-  quantity: number;
+  quantity: number | "";
 }
 
 export default function POSPage() {
@@ -37,11 +38,34 @@ export default function POSPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    setIsClient(true);
+    const savedCart = localStorage.getItem("pos_cart");
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error("Failed to parse saved cart", e);
+      }
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem("pos_cart", JSON.stringify(cart));
+    }
+  }, [cart, isClient]);
+
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const t = useTranslations("POS");
   const locale = useLocale();
+  const { formatPrice } = useCurrency();
 
   const getProductName = (p: Product) => p.name_kh ? `${p.name_en || p.name} - ${p.name_kh}` : (p.name_en || p.name);
 
@@ -58,7 +82,7 @@ export default function POSPage() {
   }, [products, search, categoryFilter, locale]);
 
   // Calculate totals
-  const subtotal = cart.reduce((sum, item) => sum + parseFloat(item.product.selling_price?.toString() || "0") * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + parseFloat(item.product.selling_price?.toString() || "0") * (typeof item.quantity === "number" ? item.quantity : 0), 0);
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + tax;
 
@@ -68,7 +92,7 @@ export default function POSPage() {
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: (typeof item.quantity === "number" ? item.quantity : 0) + 1 }
             : item
         );
       }
@@ -80,11 +104,7 @@ export default function POSPage() {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
-  const updateCartQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
+  const updateCartQuantity = (productId: string, quantity: number | "") => {
     setCart((prev) =>
       prev.map((item) =>
         item.product.id === productId ? { ...item, quantity } : item
@@ -99,11 +119,13 @@ export default function POSPage() {
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      const items = cart.map((item) => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        price: parseFloat(item.product.selling_price?.toString() || "0"),
-      }));
+      const items = cart
+        .filter((item) => typeof item.quantity === "number" && item.quantity > 0)
+        .map((item) => ({
+          product_id: item.product.id,
+          quantity: item.quantity as number,
+          price: parseFloat(item.product.selling_price?.toString() || "0"),
+        }));
       
       await createSale(items, total);
       setCart([]);
@@ -133,7 +155,7 @@ export default function POSPage() {
   return (
     <div className="flex h-[calc(100vh-3rem)] gap-6">
       {/* Products Section */}
-      <div className="flex flex-1 flex-col space-y-4">
+      <div className="flex flex-1 flex-col space-y-4 min-h-0">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
@@ -181,8 +203,8 @@ export default function POSPage() {
                 <p className="mt-4 text-sm font-medium text-foreground">{t("noProducts")}</p>
                 <p className="text-xs text-muted-foreground">
                   {search || categoryFilter !== "all"
-                    ? t("tryAdjustingFilters")
-                    : t("outOfStock")}
+                    ? t("tryAdjusting")
+                    : t("outOfStockMsg")}
                 </p>
               </CardContent>
             </Card>
@@ -235,7 +257,7 @@ export default function POSPage() {
                         </div>
                         <div className="mt-auto pt-4 flex items-end justify-between">
                           <p className="text-xl font-bold text-foreground">
-                            {formatCurrency(parseFloat(product.selling_price?.toString() || "0"))}
+                            {formatPrice(parseFloat(product.selling_price?.toString() || "0"))}
                           </p>
                           <p className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
                             {t("inStock", { count: currentStock })}
@@ -252,8 +274,8 @@ export default function POSPage() {
       </div>
 
       {/* Cart Section */}
-      <Card className="w-80 flex-shrink-0 rounded-2xl flex flex-col">
-        <CardHeader className="border-b border-border pb-4">
+      <Card className="w-90 flex-shrink-0 rounded-2xl flex flex-col min-h-0 gap-0">
+        <div className="border-b px-4 border-border pb-6">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base font-medium">
               <ShoppingCart className="h-5 w-5" />
@@ -261,17 +283,17 @@ export default function POSPage() {
             </CardTitle>
             {cart.length > 0 && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive hover:bg-transparent"
                 onClick={clearCart}
               >
                 {t("clear")}
               </Button>
             )}
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-1 flex-col p-4">
+        </div>
+        <CardContent className="flex flex-1 flex-col p-4 min-h-0">
           {cart.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="rounded-full bg-muted p-3">
@@ -296,7 +318,7 @@ export default function POSPage() {
                           {getProductName(item.product)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {t("each", { price: formatCurrency(parseFloat(item.product.selling_price?.toString() || "0")) })}
+                          {t("each", { price: formatPrice(parseFloat(item.product.selling_price?.toString() || "0")) })}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -306,23 +328,54 @@ export default function POSPage() {
                           className="h-7 w-7 rounded-lg"
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateCartQuantity(item.product.id, item.quantity - 1);
+                            const currentQty = typeof item.quantity === "number" ? item.quantity : 1;
+                            if (currentQty <= 1) {
+                              removeFromCart(item.product.id);
+                            } else {
+                              updateCartQuantity(item.product.id, currentQty - 1);
+                            }
                           }}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          className="h-8 w-8 text-center px-1 text-sm"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const val = e.target.value;
+                            if (val === "") {
+                              updateCartQuantity(item.product.id, "");
+                            } else {
+                              const num = parseInt(val);
+                              if (!isNaN(num)) {
+                                updateCartQuantity(item.product.id, Math.min(num, maxQty));
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const currentQty = typeof item.quantity === "number" ? item.quantity : 0;
+                            if (currentQty <= 0) {
+                              updateCartQuantity(item.product.id, 1);
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-7 w-7 rounded-lg"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (item.quantity < maxQty) {
-                              updateCartQuantity(item.product.id, item.quantity + 1);
+                            const currentQty = typeof item.quantity === "number" ? item.quantity : 0;
+                            if (currentQty < maxQty) {
+                              updateCartQuantity(item.product.id, currentQty + 1);
                             }
                           }}
-                          disabled={item.quantity >= maxQty}
+                          disabled={(typeof item.quantity === "number" ? item.quantity : 0) >= maxQty}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -347,15 +400,15 @@ export default function POSPage() {
               <div className="mt-4 space-y-2 border-t border-border pt-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("subtotal")}</span>
-                  <span className="text-foreground">{formatCurrency(subtotal)}</span>
+                  <span className="text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("tax")}</span>
-                  <span className="text-foreground">{formatCurrency(tax)}</span>
+                  <span className="text-foreground">{formatPrice(tax)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span className="text-foreground">{t("total")}</span>
-                  <span className="text-foreground">{formatCurrency(total)}</span>
+                  <span className="text-foreground">{formatPrice(total)}</span>
                 </div>
               </div>
 
@@ -379,7 +432,7 @@ export default function POSPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("confirmCheckout")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("completeSaleFor", { amount: formatCurrency(total) })}
+              {t("completeSaleFor", { amount: formatPrice(total) })}
               <span className="mt-2 block text-foreground">
                 {t("itemsInCart", { count: cart.length })}
               </span>

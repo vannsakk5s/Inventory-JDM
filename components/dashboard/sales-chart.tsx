@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 import {
   AreaChart,
   Area,
@@ -19,6 +19,7 @@ interface SalesChartProps {
 
 export function SalesChart({ salesData }: SalesChartProps) {
   const t = useTranslations("Dashboard");
+  const { formatPrice } = useCurrency();
 
   // Transform data for chart
   const chartData = salesData.map((item) => ({
@@ -65,7 +66,7 @@ export function SalesChart({ salesData }: SalesChartProps) {
                 tickLine={false}
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => formatPrice(value)}
               />
               <Tooltip
                 contentStyle={{
@@ -75,7 +76,7 @@ export function SalesChart({ salesData }: SalesChartProps) {
                   boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 }}
                 labelStyle={{ color: "oklch(0.95 0 0)" }}
-                formatter={(value: number) => [formatCurrency(value), t("revenue")]}
+                formatter={(value: number) => [formatPrice(value), t("revenue")]}
               />
               <Area
                 type="monotone"

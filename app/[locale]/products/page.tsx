@@ -39,8 +39,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useProducts, useCategories, deleteProduct, formatCurrency, getCurrentStock, isLowStock, Product } from "@/lib/api";
+import { useProducts, useCategories, deleteProduct, getCurrentStock, isLowStock, Product } from "@/lib/api";
 import { ProductForm } from "@/components/products/product-form";
+import { useCurrency } from "@/components/currency-context";
 
 export default function ProductsPage() {
   const t = useTranslations("Products");
@@ -54,6 +55,7 @@ export default function ProductsPage() {
 
   const { products, isLoading } = useProducts();
   const { categories } = useCategories();
+  const { formatPrice } = useCurrency();
 
   // Filter products
   const filteredProducts = products.filter((product) => {
@@ -213,10 +215,10 @@ export default function ProductsPage() {
                           <TableCell className="font-mono text-xs">{product.barcode || "-"}</TableCell>
                           <TableCell>{product.made_in || "-"}</TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(parseFloat(product.cost_price?.toString() || "0"))}
+                            {formatPrice(parseFloat(product.cost_price?.toString() || "0"))}
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatCurrency(parseFloat(product.selling_price?.toString() || "0"))}
+                            {formatPrice(parseFloat(product.selling_price?.toString() || "0"))}
                           </TableCell>
                           <TableCell className="text-right">
                             <span

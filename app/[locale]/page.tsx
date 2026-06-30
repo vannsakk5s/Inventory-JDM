@@ -9,10 +9,12 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { StockChart } from "@/components/dashboard/stock-chart";
 import { RecentSales } from "@/components/dashboard/recent-sales";
 import { LowStockAlert } from "@/components/dashboard/low-stock-alert";
-import { useProducts, useSales, useStockMovements, formatCurrency, getCurrentStock, isLowStock } from "@/lib/api";
+import { useProducts, useSales, useStockMovements, getCurrentStock, isLowStock } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
+  const { formatPrice } = useCurrency();
   const { products, isLoading: productsLoading } = useProducts();
   const { sales, isLoading: salesLoading } = useSales(7);
   const { movements, isLoading: movementsLoading } = useStockMovements(7);
@@ -128,7 +130,7 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(metrics.todayRevenue)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatPrice(metrics.todayRevenue)}</div>
             <p className="text-xs text-muted-foreground">{t("fromSalesToday")}</p>
           </CardContent>
         </Card>
@@ -139,7 +141,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(metrics.totalRevenue)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatPrice(metrics.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">{t("last7Days")}</p>
           </CardContent>
         </Card>

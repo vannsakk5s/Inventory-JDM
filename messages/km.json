@@ -5,14 +5,15 @@
   "Navigation": {
     "Dashboard": "ផ្ទាំងគ្រប់គ្រង",
     "Products": "ផលិតផល",
-    "Categories": "ប្រភេទ",
-    "Stock": "ស្តុក",
-    "PointOfSale": "លក់ (POS)",
-    "History": "ប្រវត្តិ",
-    "LowStock": "ស្តុកជិតអស់"
+    "Categories": "ប្រភេទផលិតផល",
+    "Stock": "គ្រប់គ្រងស្តុក",
+    "PointOfSale": "កន្លែងលក់ (POS)",
+    "History": "ប្រវត្តិ & របាយការណ៍",
+    "LowStock": "ស្តុកជិតអស់",
+    "exchangeRate": "អត្រាប្តូរប្រាក់ (USD ទៅ KHR)"
   },
   "POS": {
-    "title": "លក់ (POS)",
+    "title": "កន្លែងលក់ (POS)",
     "subtitle": "ជ្រើសរើសផលិតផលដើម្បីបញ្ចូលទៅក្នុងកន្ត្រក",
     "searchPlaceholder": "ស្វែងរកផលិតផល ឬស្កេនបាកូដ...",
     "allCategories": "ប្រភេទទាំងអស់",

@@ -38,22 +38,28 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
-    const [product] = await sql`
-      UPDATE products
-      SET 
-        name_en = CASE WHEN ${name_en} IS NOT NULL THEN ${name_en || null} ELSE name_en END,
-        name_kh = CASE WHEN ${name_kh !== undefined ? name_kh : null}::text IS NOT NULL THEN ${name_kh || null} ELSE name_kh END,
-        category_id = COALESCE(${category_id || null}, category_id),
-        barcode = COALESCE(${barcode || null}, barcode),
-        made_in = COALESCE(${made_in || null}, made_in),
-        cost_price = COALESCE(${cost_price}, cost_price),
-        selling_price = COALESCE(${selling_price}, selling_price),
-        stock_in = COALESCE(${stock_in}, stock_in),
-        stock_limit = COALESCE(${stock_limit}, stock_limit),
-        image_url = COALESCE(${image_url || null}, image_url)
-      WHERE id = ${id}
-      RETURNING *, name_en as name
-    `
+    const updateData: Record<string, any> = {}
+    if (name_en !== undefined) updateData.name_en = name_en || null
+    if (name_kh !== undefined) updateData.name_kh = name_kh || null
+    if (category_id !== undefined) updateData.category_id = category_id || null
+    if (barcode !== undefined) updateData.barcode = barcode || null
+    if (made_in !== undefined) updateData.made_in = made_in || null
+    if (cost_price !== undefined) updateData.cost_price = cost_price
+    if (selling_price !== undefined) updateData.selling_price = selling_price
+    if (stock_in !== undefined) updateData.stock_in = stock_in
+    if (stock_limit !== undefined) updateData.stock_limit = stock_limit
+    if (image_url !== undefined) updateData.image_url = image_url || null
+
+    let product = currentProduct
+    if (Object.keys(updateData).length > 0) {
+      const [updated] = await sql`
+        UPDATE products
+        SET ${sql(updateData)}
+        WHERE id = ${id}
+        RETURNING *, name_en as name
+      `
+      product = updated
+    }
 
     // Record stock movement if stock changed
     if (stock_in !== undefined && stock_in !== currentProduct.stock_in) {

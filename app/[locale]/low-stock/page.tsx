@@ -22,11 +22,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useProducts, restockProduct, formatCurrency, getCurrentStock, Product } from "@/lib/api";
+import { useProducts, restockProduct, getCurrentStock, Product } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 
 export default function LowStockPage() {
   const t = useTranslations("LowStock");
   const { products, isLoading } = useProducts({ lowStock: true });
+  const { formatPrice } = useCurrency();
   const [restockingProduct, setRestockingProduct] = useState<Product | null>(null);
   const [restockQuantity, setRestockQuantity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -204,7 +206,7 @@ export default function LowStockPage() {
                           {product.stock_limit}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {formatCurrency(restockCost)}
+                          {formatPrice(restockCost)}
                           <span className="ml-1 text-xs">({unitsNeeded} {t("units")})</span>
                         </TableCell>
                         <TableCell className="text-right">
@@ -261,7 +263,7 @@ export default function LowStockPage() {
                 />
                 {restockQuantity && parseInt(restockQuantity) > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {t("costLabel")} {formatCurrency(parseInt(restockQuantity) * parseFloat(restockingProduct.cost_price?.toString() || "0"))}
+                    {t("costLabel")} {formatPrice(parseInt(restockQuantity) * parseFloat(restockingProduct.cost_price?.toString() || "0"))}
                   </p>
                 )}
               </div>

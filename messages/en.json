@@ -9,7 +9,8 @@
     "Stock": "Stock Management",
     "PointOfSale": "Point of Sale (POS)",
     "History": "History & Reports",
-    "LowStock": "Low Stock Alerts"
+    "LowStock": "Low Stock Alerts",
+    "exchangeRate": "Exchange Rate (USD to KHR)"
   },
   "POS": {
     "title": "Point of Sale",
@@ -21,7 +22,7 @@
     "outOfStockMsg": "All products are out of stock",
     "inStock": "{count} in stock",
     "cart": "Cart",
-    "clear": "Clear",
+    "clear": "Clear All",
     "cartEmpty": "Cart is empty",
     "clickToAdd": "Click on products to add them",
     "each": "each",

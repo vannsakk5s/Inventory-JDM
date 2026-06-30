@@ -10,8 +10,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ isCollapsed }: { isCollapsed?: boolean }) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -22,10 +23,10 @@ export function LanguageSwitcher() {
 
   return (
     <Select value={locale} onValueChange={onSelectChange}>
-      <SelectTrigger className="w-full bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent h-9">
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-muted-foreground" />
-          <SelectValue placeholder="Language" />
+      <SelectTrigger className={cn("bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent h-9", isCollapsed ? "w-9 px-0 justify-center [&>svg]:hidden" : "w-full")}>
+        <div className="flex items-center justify-center">
+          <Globe className={cn("h-4 w-4", !isCollapsed && "mr-2 text-muted-foreground")} />
+          {!isCollapsed && <SelectValue placeholder="Language" />}
         </div>
       </SelectTrigger>
       <SelectContent>

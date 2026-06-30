@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/table";
 
 import { Spinner } from "@/components/ui/spinner";
-import { useSales, useStockMovements, formatCurrency } from "@/lib/api";
+import { useSales, useStockMovements } from "@/lib/api";
+import { useCurrency } from "@/components/currency-context";
 import {
   AreaChart,
   Area,
@@ -40,6 +41,7 @@ export default function HistoryPage() {
     from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     to: new Date(),
   });
+  const { formatPrice } = useCurrency();
   const [currentPage, setCurrentPage] = useState(1);
   const [movementPage, setMovementPage] = useState(1);
   const itemsPerPage = 10;
@@ -152,7 +154,7 @@ export default function HistoryPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatPrice(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               {date?.from ? date.from.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
               {date?.to ? " - " + date.to.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
@@ -212,7 +214,7 @@ export default function HistoryPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(v) => formatPrice(v)} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "oklch(0.16 0 0)",
@@ -220,7 +222,7 @@ export default function HistoryPage() {
                       borderRadius: "12px",
                     }}
                     labelStyle={{ color: "oklch(0.95 0 0)" }}
-                    formatter={(value: number) => [formatCurrency(value), t("revenue")]}
+                    formatter={(value: number) => [formatPrice(value), t("revenue")]}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="oklch(0.65 0.2 250)" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue2)" />
                 </AreaChart>
@@ -312,7 +314,7 @@ export default function HistoryPage() {
                             <TableCell className="max-w-xs truncate">{productNames}</TableCell>
                             <TableCell className="text-center">{totalItems}</TableCell>
                             <TableCell className="text-right font-medium">
-                              {formatCurrency(parseFloat(sale.total?.toString() || "0"))}
+                              {formatPrice(parseFloat(sale.total?.toString() || "0"))}
                             </TableCell>
                           </TableRow>
                         );
