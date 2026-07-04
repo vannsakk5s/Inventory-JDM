@@ -346,7 +346,7 @@ export default function POSPage() {
                             {getProductName(product)}
                           </h3>
                           <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                            {[product.barcode, product.made_in].filter(Boolean).join(" • ") || product.category_name}
+                            {[product.category_name, product.made_in].filter(Boolean).join(" • ")}
                           </p>
                         </div>
                         <div className="mt-auto pt-4 flex items-end justify-between">

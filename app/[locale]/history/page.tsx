@@ -282,7 +282,7 @@ export default function HistoryPage() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {sales.length} {sales.length !== 1 ? t("salesCount") : t("saleCount")} &middot; {t("total")} {formatPrice(totalRevenue)} &middot; {totalItemsPurchased} {t("items")}
+                {sales.length} {sales.length !== 1 ? t("salesCount") : t("saleCount")}
               </CardTitle>
             </CardHeader>
             <CardContent>
