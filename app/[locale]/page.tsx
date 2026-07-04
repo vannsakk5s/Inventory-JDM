@@ -45,17 +45,22 @@ export default function DashboardPage() {
     };
   }, [products, sales]);
 
-  // Generate chart data for sales
-  const salesChartData = useMemo(() => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
+  // Get current week dates (Monday to Sunday)
+  const currentWeekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
+      const dayOfWeek = date.getDay();
+      const distanceToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      date.setDate(date.getDate() - distanceToMonday + i);
       date.setHours(0, 0, 0, 0);
       return date;
     });
+  }, []);
 
-    return last7Days.map((date) => {
-      const dayStart = new Date(date);
+  // Generate chart data for sales
+  const salesChartData = useMemo(() => {
+    return currentWeekDays.map((date) => {
+      const dayStart = date;
       const dayEnd = new Date(date);
       dayEnd.setDate(dayEnd.getDate() + 1);
 
@@ -71,16 +76,35 @@ export default function DashboardPage() {
         revenue,
       };
     });
-  }, [sales]);
+  }, [sales, currentWeekDays]);
 
   // Generate chart data for stock movements
   const stockChartData = useMemo(() => {
-    return movements.map((m) => ({
-      date: m.created_at,
-      type: m.type,
-      quantity: m.quantity,
-    }));
-  }, [movements]);
+    return currentWeekDays.map((date) => {
+      const dayStart = date;
+      const dayEnd = new Date(date);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const dayMovements = movements.filter((m) => {
+        const mDate = new Date(m.created_at);
+        return mDate >= dayStart && mDate < dayEnd;
+      });
+
+      const stockIn = dayMovements
+        .filter((m) => m.type === "in")
+        .reduce((sum, m) => sum + parseInt(m.quantity?.toString() || "0"), 0);
+        
+      const stockOut = dayMovements
+        .filter((m) => m.type === "out")
+        .reduce((sum, m) => sum + parseInt(m.quantity?.toString() || "0"), 0);
+
+      return {
+        date: date.toISOString(),
+        stockIn,
+        stockOut,
+      };
+    });
+  }, [movements, currentWeekDays]);
 
   if (isLoading) {
     return (

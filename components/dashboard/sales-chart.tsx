@@ -27,16 +27,6 @@ export function SalesChart({ salesData }: SalesChartProps) {
     revenue: parseFloat(item.revenue?.toString() || "0"),
   }));
 
-  // If no data, show placeholder for last 7 days
-  if (chartData.length === 0) {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const today = new Date().getDay();
-    for (let i = 6; i >= 0; i--) {
-      const dayIndex = (today - i + 7) % 7;
-      chartData.push({ date: days[dayIndex], revenue: 0 });
-    }
-  }
-
   return (
     <Card className="rounded-2xl">
       <CardHeader>

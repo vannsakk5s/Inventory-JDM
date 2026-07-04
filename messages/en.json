@@ -38,7 +38,8 @@
     "completeSale": "Complete Sale",
     "saleComplete": "Sale Complete!",
     "transactionRecorded": "The transaction has been recorded successfully.",
-    "continue": "Continue"
+    "continue": "Continue",
+    "printReceipt": "Print Receipt"
   },
   "Dashboard": {
     "title": "Dashboard",
@@ -193,6 +194,8 @@
     "stockMovement": "Stock Movement",
     "stockMovements": "Stock Movements",
     "salesHistory": "Sales History",
+    "saleDetails": "Sale Details",
+    "more": "more",
     "salesCount": "Sales",
     "saleCount": "Sale",
     "noSales": "No sales in this period",

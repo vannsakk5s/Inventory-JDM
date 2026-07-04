@@ -38,7 +38,8 @@
     "completeSale": "បញ្ចប់ការលក់",
     "saleComplete": "ការលក់បានបញ្ចប់!",
     "transactionRecorded": "ប្រតិបត្តិការត្រូវបានកត់ត្រាដោយជោគជ័យ។",
-    "continue": "បន្ត"
+    "continue": "បន្ត",
+    "printReceipt": "បោះពុម្ពវិក្កយបត្រ"
   },
   "Dashboard": {
     "title": "ផ្ទាំងគ្រប់គ្រង",
@@ -193,6 +194,8 @@
     "stockMovement": "ចលនាស្តុក",
     "stockMovements": "ចលនាស្តុក",
     "salesHistory": "ប្រវត្តិនៃការលក់",
+    "saleDetails": "ព័ត៌មានលម្អិតនៃការលក់",
+    "more": "ទៀត",
     "salesCount": "ការលក់",
     "saleCount": "ការលក់",
     "noSales": "គ្មានការលក់ក្នុងរយៈពេលនេះទេ",

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Package } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Package, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +63,13 @@ export default function POSPage() {
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [lastOrder, setLastOrder] = useState<{
+    items: CartItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    date: Date;
+  } | null>(null);
   const t = useTranslations("POS");
   const locale = useLocale();
   const { formatPrice } = useCurrency();
@@ -128,6 +135,15 @@ export default function POSPage() {
         }));
       
       await createSale(items, total);
+      
+      setLastOrder({
+        items: [...cart],
+        subtotal,
+        tax,
+        total,
+        date: new Date()
+      });
+      
       setCart([]);
       setShowCheckoutDialog(false);
       setShowSuccessDialog(true);
@@ -142,6 +158,82 @@ export default function POSPage() {
     const product = products.find((p) => p.id === productId);
     if (!product) return 0;
     return getCurrentStock(product);
+  };
+
+  const handlePrintReceipt = () => {
+    if (!lastOrder) return;
+
+    const receiptHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; color: black; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .title { font-size: 24px; font-weight: bold; margin: 0; }
+            .date { font-size: 12px; color: #666; margin-top: 4px; }
+            .items { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+            .item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+            .item-name { font-weight: 500; margin-bottom: 2px; }
+            .item-details { color: #666; font-size: 12px; }
+            .totals { font-size: 14px; }
+            .total-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+            .grand-total { font-size: 18px; font-weight: bold; margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px; }
+            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            @media print {
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Inventory JDM</div>
+            <div class="date">${lastOrder.date.toLocaleString()}</div>
+          </div>
+          <div class="items">
+            ${lastOrder.items.map(item => `
+              <div class="item">
+                <div>
+                  <div class="item-name">${getProductName(item.product)}</div>
+                  <div class="item-details">${item.quantity} x ${formatPrice(parseFloat(item.product.selling_price?.toString() || "0"))}</div>
+                </div>
+                <div>${formatPrice(parseFloat(item.product.selling_price?.toString() || "0") * (typeof item.quantity === 'number' ? item.quantity : 0))}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="totals">
+            <div class="total-row">
+              <span>${t("subtotal")}</span>
+              <span>${formatPrice(lastOrder.subtotal)}</span>
+            </div>
+            <div class="total-row">
+              <span>${t("tax")}</span>
+              <span>${formatPrice(lastOrder.tax)}</span>
+            </div>
+            <div class="total-row grand-total">
+              <span>${t("total")}</span>
+              <span>${formatPrice(lastOrder.total)}</span>
+            </div>
+          </div>
+          <div class="footer">
+            ${t("saleComplete")}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (printWindow) {
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+    }
   };
 
   if (isLoading) {
@@ -253,7 +345,9 @@ export default function POSPage() {
                           <h3 className="truncate text-base font-semibold text-foreground">
                             {getProductName(product)}
                           </h3>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{product.category_name}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                            {[product.barcode, product.made_in].filter(Boolean).join(" • ") || product.category_name}
+                          </p>
                         </div>
                         <div className="mt-auto pt-4 flex items-end justify-between">
                           <p className="text-xl font-bold text-foreground">
@@ -458,6 +552,10 @@ export default function POSPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            <Button variant="outline" onClick={handlePrintReceipt} className="rounded-lg">
+              <Printer className="mr-2 h-4 w-4" />
+              {t("printReceipt")}
+            </Button>
             <AlertDialogAction onClick={() => setShowSuccessDialog(false)} className="rounded-lg">
               {t("continue")}
             </AlertDialogAction>

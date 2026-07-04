@@ -16,9 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { Spinner } from "@/components/ui/spinner";
-import { useSales, useStockMovements } from "@/lib/api";
+import { useSales, useStockMovements, Sale } from "@/lib/api";
 import { useCurrency } from "@/components/currency-context";
 import {
   AreaChart,
@@ -44,6 +50,7 @@ export default function HistoryPage() {
   const { formatPrice } = useCurrency();
   const [currentPage, setCurrentPage] = useState(1);
   const [movementPage, setMovementPage] = useState(1);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const itemsPerPage = 10;
 
   const fromStr = date?.from ? date.from.toISOString() : undefined;
@@ -63,6 +70,10 @@ export default function HistoryPage() {
   // Calculate summary stats
   const totalRevenue = useMemo(() => 
     sales.reduce((sum, sale) => sum + parseFloat(sale.total?.toString() || "0"), 0),
+    [sales]
+  );
+  const totalItemsPurchased = useMemo(() =>
+    sales.reduce((sum, sale) => sum + (sale.items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0),
     [sales]
   );
   const totalTransactions = sales.length;
@@ -271,7 +282,7 @@ export default function HistoryPage() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {sales.length} {sales.length !== 1 ? t("salesCount") : t("saleCount")}
+                {sales.length} {sales.length !== 1 ? t("salesCount") : t("saleCount")} &middot; {t("total")} {formatPrice(totalRevenue)} &middot; {totalItemsPurchased} {t("items")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -297,21 +308,31 @@ export default function HistoryPage() {
                           const kh = p.product_name_kh || "";
                           const nameStr = [en, kh].filter(Boolean).join(" - ");
                           return `${nameStr} (x${p.quantity})`;
-                        }).join(", ") || "Items";
+                        }) || [];
+
+                        const displayedProducts = productNames.slice(0, 2).join(", ");
+                        const remainingCount = productNames.length - 2;
+                        const productDisplayStr = remainingCount > 0
+                          ? `${displayedProducts}, +${remainingCount} ${t("more")}`
+                          : displayedProducts || "Items";
+                        
                         const totalItems = sale.items?.reduce((sum, p) => sum + p.quantity, 0) || 0;
 
                         return (
-                          <TableRow key={sale.id}>
+                          <TableRow 
+                            key={sale.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => setSelectedSale(sale)}
+                          >
                             <TableCell>
                               {new Date(sale.created_at).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
-                                year: "numeric",
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
                             </TableCell>
-                            <TableCell className="max-w-xs truncate">{productNames}</TableCell>
+                            <TableCell className="max-w-xs truncate">{productDisplayStr}</TableCell>
                             <TableCell className="text-center">{totalItems}</TableCell>
                             <TableCell className="text-right font-medium">
                               {formatPrice(parseFloat(sale.total?.toString() || "0"))}
@@ -385,7 +406,8 @@ export default function HistoryPage() {
                             {new Date(movement.created_at).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
-                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </TableCell>
                           <TableCell>{movement.product_name || t("unknown")}</TableCell>
@@ -442,6 +464,59 @@ export default function HistoryPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Sale Details Modal */}
+      <Dialog open={!!selectedSale} onOpenChange={(open) => !open && setSelectedSale(null)}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("saleDetails")}</DialogTitle>
+          </DialogHeader>
+          
+          {selectedSale && (
+            <div className="space-y-6">
+              <div className="text-sm text-muted-foreground border-b pb-4">
+                <p>{new Date(selectedSale.created_at).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}</p>
+                <p className="text-xs mt-1 opacity-70">ID: {selectedSale.id}</p>
+              </div>
+
+              <div className="space-y-3 max-h-[40vh] overflow-auto pr-2">
+                {selectedSale.items?.map((item, index) => {
+                  const en = item.product_name || "";
+                  const kh = item.product_name_kh || "";
+                  const nameStr = [en, kh].filter(Boolean).join(" - ");
+                  const itemTotal = item.quantity * item.price;
+                  
+                  return (
+                    <div key={item.id} className="flex justify-between items-start text-sm">
+                      <div className="pr-4">
+                        <p className="font-medium text-foreground leading-tight">{index + 1}. {nameStr}</p>
+                        <p className="text-muted-foreground mt-0.5">
+                          {item.quantity} x {formatPrice(item.price)}
+                        </p>
+                      </div>
+                      <div className="font-medium text-foreground whitespace-nowrap">
+                        {formatPrice(itemTotal)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>{t("total")}</span>
+                  <span>{formatPrice(parseFloat(selectedSale.total?.toString() || "0"))}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

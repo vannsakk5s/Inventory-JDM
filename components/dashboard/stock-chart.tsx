@@ -14,34 +14,17 @@ import {
 } from "recharts";
 
 interface StockChartProps {
-  stockData: { date: string; type: string; quantity: number }[];
+  stockData: { date: string; stockIn: number; stockOut: number }[];
 }
 
 export function StockChart({ stockData }: StockChartProps) {
   const t = useTranslations("Dashboard");
 
-  // Initialize with the last 7 days chronologically
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const today = new Date().getDay();
-  const chartData: { date: string; stockIn: number; stockOut: number }[] = [];
-  
-  for (let i = 6; i >= 0; i--) {
-    const dayIndex = (today - i + 7) % 7;
-    chartData.push({ date: days[dayIndex], stockIn: 0, stockOut: 0 });
-  }
-
-  const chartDataMap = Object.fromEntries(chartData.map(item => [item.date, item]));
-
-  stockData.forEach((item) => {
-    const dateStr = new Date(item.date).toLocaleDateString("en-US", { weekday: "short" });
-    if (chartDataMap[dateStr]) {
-      if (item.type === "in") {
-        chartDataMap[dateStr].stockIn += parseInt(item.quantity?.toString() || "0");
-      } else {
-        chartDataMap[dateStr].stockOut += parseInt(item.quantity?.toString() || "0");
-      }
-    }
-  });
+  const chartData = stockData.map((item) => ({
+    date: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
+    stockIn: item.stockIn,
+    stockOut: item.stockOut,
+  }));
 
   return (
     <Card className="rounded-2xl">
